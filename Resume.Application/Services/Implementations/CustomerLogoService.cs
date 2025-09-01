@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Resume.Application.Services.Interfaces;
 using Resume.Domain.Repository;
 using Resume.Domain.ViewModels.CustomerLogo;
@@ -16,10 +17,12 @@ namespace Resume.Application.Services.Implementations
 
         #region Constructor ICustomerLogoRepository
         private readonly ICustomerLogoRepository _customerLogoRepository;
+        private readonly IMapper _mapper;
 
-        public CustomerLogoService(ICustomerLogoRepository customerLogoRepository)
+        public CustomerLogoService(ICustomerLogoRepository customerLogoRepository,IMapper mapper)
         {
             _customerLogoRepository = customerLogoRepository;
+            _mapper = mapper;
         }
 
         #endregion
@@ -30,17 +33,9 @@ namespace Resume.Application.Services.Implementations
             var customerLogos = await _customerLogoRepository.GetAllOrderedAsync(cancellationToken);
 
 
-             return customerLogos.Select(c => new CustomerLogoListViewModel()
-                {
-                    Id = c.Id,
-                    Link = c.Link,
-                    Logo = c.Logo,
-                    LogoAlt = c.LogoAlt,
-                    Order = c.Order
-                })
-                .ToList();
+            return _mapper.Map<List<CustomerLogoListViewModel>>(customerLogos);
 
-            
+
         }
 
 

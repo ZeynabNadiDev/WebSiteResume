@@ -2,6 +2,6 @@
 
 public class CreateOrUpdateReservationViewModel
 {
-    public ulong Id { get; set; }
+    public long Id { get; set; }
     public string ReservationDate { get; set; }
 }

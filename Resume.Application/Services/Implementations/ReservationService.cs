@@ -1,14 +1,15 @@
-﻿using Resume.Application.Services.Interfaces;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
+using Resume.Application.Convertors;
+using Resume.Application.Services.Interfaces;
+using Resume.Domain.Entity;
 using Resume.Domain.Entity.Reservation;
 using Resume.Domain.Repository;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Threading;
-using System;
-using Resume.Application.Convertors;
-using Microsoft.EntityFrameworkCore;
-using Resume.Domain.Entity;
 using Resume.Domain.ViewModels.Reservation;
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Resume.Application.Services.Implementations;
 
@@ -16,9 +17,11 @@ public class ReservationService : IReservationService
 {
     #region Constructor ReservationRepository
     private readonly IReservationRepository _reservationRepository;
-    public ReservationService(IReservationRepository reservationRepository)
+    private readonly IMapper _mapper;
+    public ReservationService(IReservationRepository reservationRepository,IMapper mapper)
     {
         _reservationRepository = reservationRepository;
+        _mapper = mapper;
     }
     #endregion
     public async Task<List<ReservationDate>> GetListOfReservations(CancellationToken cancellationToken)
@@ -68,11 +71,10 @@ public class ReservationService : IReservationService
         if (reservationDate == null) 
             return new CreateOrUpdateReservationViewModel() { Id = 0 };
 
-        return new CreateOrUpdateReservationViewModel()
-        {
-            Id = reservationDate.Id,
-            ReservationDate = reservationDate.Date.ToShamsi(),
-        };
+        var viewModel = _mapper.Map<CreateOrUpdateReservationViewModel>(reservationDate);
+        viewModel.ReservationDate = reservationDate.Date.ToShamsi();
+
+        return viewModel;
     }
 
     public async Task<bool> CreateOrEditReservationDate(CreateOrUpdateReservationViewModel reservationDate ,
@@ -80,10 +82,8 @@ public class ReservationService : IReservationService
     {
         if (reservationDate.Id == 0)
         {
-            var newReservationDate = new ReservationDate()
-            {
-                Date = reservationDate.ReservationDate.ToMiladiDateTime()
-            };
+            var newReservationDate = _mapper.Map<ReservationDate>(reservationDate);
+            newReservationDate.Date = reservationDate.ReservationDate.ToMiladiDateTime();
 
             await _reservationRepository.AddAsync(newReservationDate , cancellationToken);
             await _reservationRepository.SaveChangeAsync(cancellationToken);
@@ -94,7 +94,7 @@ public class ReservationService : IReservationService
 
         if (currentReservationDate == null) 
             return false;
-
+        _mapper.Map(reservationDate, currentReservationDate);
         currentReservationDate.Date = reservationDate.ReservationDate.ToMiladiDateTime();
 
         _reservationRepository.Update(currentReservationDate);

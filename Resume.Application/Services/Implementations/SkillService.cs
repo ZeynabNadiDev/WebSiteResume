@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Resume.Application.Services.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Repository;
@@ -16,9 +17,11 @@ namespace Resume.Application.Services.Implementations
 
         #region Constructor SkillRepository
         private readonly ISkillRepository _skillRepository;
-        public SkillService(ISkillRepository skillRepository)
+        private readonly IMapper _mapper;
+        public SkillService(ISkillRepository skillRepository,IMapper mapper)
         {
             _skillRepository = skillRepository;
+            _mapper = mapper;
         }
         #endregion
 
@@ -30,14 +33,7 @@ namespace Resume.Application.Services.Implementations
         public async Task<List<SkillViewModel>> GetAllSkillsAsync(CancellationToken cancellationToken)
         {
             var skills = await _skillRepository.GetAllOrderedAsync(cancellationToken);
-              return skills.Select(s => new SkillViewModel()
-                {
-                    Id = s.Id,
-                    Order = s.Order,
-                    Percent = s.Percent,
-                    Title = s.Title
-                })
-                 .ToList();
+            return _mapper.Map<List<SkillViewModel>>(skills);
 
         }
 
@@ -49,26 +45,14 @@ namespace Resume.Application.Services.Implementations
 
             if (skill == null) return new CreateOrEditSkillViewModel() { Id = 0 };
 
-            return new CreateOrEditSkillViewModel()
-            {
-                Id = skill.Id,
-                Order = skill.Order,
-                Percent = skill.Percent,
-                Title = skill.Title
-            };
+            return _mapper.Map<CreateOrEditSkillViewModel>(skill);
         }
 
         public async Task<bool> CreateOrEditSkillAsync(CreateOrEditSkillViewModel skill,CancellationToken cancellationToken)
         {
             if (skill.Id == 0)
             {
-                var newSkill = new Skill()
-                {
-                    Id = skill.Id,
-                    Order = skill.Order,
-                    Percent = skill.Percent,
-                    Title = skill.Title
-                };
+                var newSkill = _mapper.Map<Skill>(skill);
 
                 await _skillRepository.AddAsync(newSkill,cancellationToken);
                 await _skillRepository.SaveChangeAsync(cancellationToken);
@@ -79,10 +63,7 @@ namespace Resume.Application.Services.Implementations
 
             if (currentSkill == null) return false;
 
-            currentSkill.Order = skill.Order;
-            currentSkill.Percent = skill.Percent;
-            currentSkill.Title = skill.Title;
-
+            _mapper.Map(skill, currentSkill);
             _skillRepository.Update(currentSkill);
             await _skillRepository.SaveChangeAsync(cancellationToken);
             return true;

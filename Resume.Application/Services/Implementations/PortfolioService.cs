@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Resume.Application.Services.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Repository;
@@ -17,11 +18,13 @@ namespace Resume.Application.Services.Implementations
         #region Constructor PortfolioRepository
         private readonly IPortfolioRepository _portfolioRepository;
         private readonly IPortfolioCategoryRepository _portfolioCategoryRepository;
+        private readonly IMapper _mapper;
 
-        public PortfolioService(IPortfolioRepository portfolioRepository, IPortfolioCategoryRepository portfolioCategoryRepository)
+        public PortfolioService(IPortfolioRepository portfolioRepository, IPortfolioCategoryRepository portfolioCategoryRepository,IMapper mapper)
         {
             _portfolioRepository = portfolioRepository;
             _portfolioCategoryRepository = portfolioCategoryRepository;
+            _mapper = mapper;
         }
         #endregion
 
@@ -36,19 +39,9 @@ namespace Resume.Application.Services.Implementations
         public async Task<List<PortfolioViewModel>> GetAllPortfolios(CancellationToken cancellationToken)
         {
            var portfolios = await _portfolioRepository.GetAllOrderedAsync(cancellationToken);
-           return  portfolios.Select(p => new PortfolioViewModel()
-                 {
-                    Id = p.Id,
-                    Image = p.Image,
-                    ImageAlt = p.ImageAlt,
-                    Link = p.Link,
-                    Order = p.Order,
-                    PortfolioCategoryName = p.PortfolioCategory.Name,
-                    Title = p.Title
-                })
-                .ToList();
+            return _mapper.Map<List<PortfolioViewModel>>(portfolios);
 
-          
+
         }
 
         public async Task<CreateOrEditPortfolioViewModel> FillCreateOrEditPortfolioViewModel(long id,CancellationToken cancellationToken)
@@ -65,17 +58,9 @@ namespace Resume.Application.Services.Implementations
                 PortfolioCategories = await GetAllPortfolioCategories(cancellationToken)
             };
 
-            return new CreateOrEditPortfolioViewModel()
-            {
-                Id = portfolio.Id,
-                Image = portfolio.Image,
-                ImageAlt = portfolio.ImageAlt,
-                Link = portfolio.Link,
-                Order = portfolio.Order,
-                Title = portfolio.Title,
-                PortfolioCategoryId = portfolio.PortfolioCategoryId,
-                PortfolioCategories = await GetAllPortfolioCategories(cancellationToken)
-            };
+            var vm = _mapper.Map<CreateOrEditPortfolioViewModel>(portfolio);
+            vm.PortfolioCategories = await GetAllPortfolioCategories(cancellationToken);
+            return vm;
 
         }
 
@@ -83,15 +68,7 @@ namespace Resume.Application.Services.Implementations
         {
             if (portfolio.Id == 0)
             {
-                var newPortfolio = new Portfolio()
-                {
-                    Image = portfolio.Image,
-                    ImageAlt = portfolio.ImageAlt,
-                    Link = portfolio.Link,
-                    Order = portfolio.Order,
-                    Title = portfolio.Title,
-                    PortfolioCategoryId = portfolio.PortfolioCategoryId,
-                };
+                var newPortfolio = _mapper.Map<Portfolio>(portfolio);
                 await _portfolioRepository.AddAsync(newPortfolio,cancellationToken);
                 await _portfolioRepository.SaveChangeAsync(cancellationToken);
                 return true;
@@ -100,12 +77,7 @@ namespace Resume.Application.Services.Implementations
             Portfolio currnetPortfolio = await GetPortfolioById(portfolio.Id,cancellationToken);
             if (currnetPortfolio == null) return false;
 
-            currnetPortfolio.Image = portfolio.Image;
-            currnetPortfolio.ImageAlt = portfolio.ImageAlt;
-            currnetPortfolio.Link = portfolio.Link;
-            currnetPortfolio.Order = portfolio.Order;
-            currnetPortfolio.Title = portfolio.Title;
-            currnetPortfolio.PortfolioCategoryId = portfolio.PortfolioCategoryId;
+            _mapper.Map(portfolio, currnetPortfolio);
 
             _portfolioRepository.Update(currnetPortfolio);
             await _portfolioRepository.SaveChangeAsync(cancellationToken);
@@ -135,16 +107,9 @@ namespace Resume.Application.Services.Implementations
         public async Task<List<PortfolioCategoryViewModel>> GetAllPortfolioCategories(CancellationToken cancellationToken)
         {
             var portfolioCategories = await _portfolioCategoryRepository.GetAllOrderedAsync(cancellationToken);
-              return portfolioCategories.Select(pc => new PortfolioCategoryViewModel()
-                {
-                    Id = pc.Id,
-                    Name = pc.Name,
-                    Order = pc.Order,
-                    Title = pc.Title
-                })
-                .ToList();
+            return _mapper.Map<List<PortfolioCategoryViewModel>>(portfolioCategories);
 
-           
+
         }
 
         public async Task<CreateOrEditPortfolioCategoryViewModel> FillCreateOrEditPortfolioCategoryViewModel(long id,CancellationToken cancellationToken)
@@ -155,13 +120,7 @@ namespace Resume.Application.Services.Implementations
 
             if (portfolioCategory == null) return new CreateOrEditPortfolioCategoryViewModel() { Id = 0 };
 
-            return new CreateOrEditPortfolioCategoryViewModel()
-            {
-                Id = portfolioCategory.Id,
-                Name = portfolioCategory.Name,
-                Order = portfolioCategory.Order,
-                Title = portfolioCategory.Title
-            };
+            return _mapper.Map<CreateOrEditPortfolioCategoryViewModel>(portfolioCategory);
         }
 
         public async Task<bool> CreateOrEditPortfolioCategory(CreateOrEditPortfolioCategoryViewModel portfolioCategory,CancellationToken cancellationToken)
@@ -169,13 +128,7 @@ namespace Resume.Application.Services.Implementations
 
             if (portfolioCategory.Id == 0)
             {
-                var newPortfolioCategory = new PortfolioCategory()
-                {
-                    Name = portfolioCategory.Name,
-                    Order = portfolioCategory.Order,
-                    Title = portfolioCategory.Title
-                };
-
+                var newPortfolioCategory = _mapper.Map<PortfolioCategory>(portfolioCategory);
                 await _portfolioCategoryRepository.AddAsync(newPortfolioCategory, cancellationToken);
                 await _portfolioCategoryRepository.SaveChangeAsync(cancellationToken);
                 return true;
@@ -185,9 +138,7 @@ namespace Resume.Application.Services.Implementations
 
             if (currentPortfolioCategory == null) return false;
 
-            currentPortfolioCategory.Name = portfolioCategory.Name;
-            currentPortfolioCategory.Order = portfolioCategory.Order;
-            currentPortfolioCategory.Title = portfolioCategory.Title;
+            _mapper.Map(portfolioCategory, currentPortfolioCategory);
 
             _portfolioCategoryRepository.Update(currentPortfolioCategory);
             await _portfolioCategoryRepository.SaveChangeAsync(cancellationToken);

@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Resume.Application.Services.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Repository;
@@ -16,10 +17,11 @@ namespace Resume.Application.Services.Implementations
 
         #region Constructor ThingIDoRepository
         private readonly IThingIDoRepository _thingIDoRepository;
-
-        public ThingIDoService(IThingIDoRepository thingIDoRepository)
+        private readonly IMapper _mapper;
+        public ThingIDoService(IThingIDoRepository thingIDoRepository,IMapper mapper)
         {
             _thingIDoRepository = thingIDoRepository;
+            _mapper = mapper;
         }
         #endregion
 
@@ -31,18 +33,9 @@ namespace Resume.Application.Services.Implementations
         public async Task<List<ThingIDoListViewModel>> GetAllThingIDoForIndex(CancellationToken cancellationToken)
         {
             var thingIDos = await _thingIDoRepository.GetAllOrderedAsync(cancellationToken);
-            return thingIDos.Select(t => new ThingIDoListViewModel()
-                {
-                    Id = t.Id,
-                    ColumnLg = t.ColumnLg,
-                    Description = t.Description,
-                    Order = t.Order,
-                    Icon = t.Icon,
-                    Title = t.Title
-                })
-                .ToList();
+            return _mapper.Map<List<ThingIDoListViewModel>>(thingIDos);
 
-            
+
         }
 
         public async Task<bool> CreateOrEditThingIDo(CreateOrEditThingIDoViewModel thingIDo,CancellationToken cancellationToken)
@@ -51,14 +44,8 @@ namespace Resume.Application.Services.Implementations
             if (thingIDo.Id == 0)
             {
                 // Create
-                var newThingIDo = new ThingIDo()
-                {
-                    ColumnLg = thingIDo.ColumnLg,
-                    Description = thingIDo.Description,
-                    Icon = thingIDo.Icon,
-                    Order = thingIDo.Order,
-                    Title = thingIDo.Title
-                };
+                var newThingIDo = _mapper.Map<ThingIDo>(thingIDo);
+
 
                 await _thingIDoRepository.AddAsync(newThingIDo,cancellationToken);
                 await _thingIDoRepository.SaveChangeAsync(cancellationToken);
@@ -70,12 +57,7 @@ namespace Resume.Application.Services.Implementations
             ThingIDo currentThingIDo = await GetThingIDoById(thingIDo.Id,cancellationToken);
 
             if (currentThingIDo == null) return false;
-
-            currentThingIDo.ColumnLg = thingIDo.ColumnLg;
-            currentThingIDo.Description = thingIDo.Description;
-            currentThingIDo.Icon = thingIDo.Icon;
-            currentThingIDo.Order = thingIDo.Order;
-            currentThingIDo.Title = thingIDo.Title;
+            _mapper.Map(thingIDo, currentThingIDo);
 
             _thingIDoRepository.Update(currentThingIDo);
             await _thingIDoRepository.SaveChangeAsync(cancellationToken);
@@ -91,15 +73,7 @@ namespace Resume.Application.Services.Implementations
 
             if (thingIDo == null) return new CreateOrEditThingIDoViewModel() { Id = 0 };
 
-            return new CreateOrEditThingIDoViewModel()
-            {
-                Id = thingIDo.Id,
-                ColumnLg = thingIDo.ColumnLg,
-                Description = thingIDo.Description,
-                Icon = thingIDo.Icon,
-                Order = thingIDo.Order,
-                Title = thingIDo.Title
-            };
+            return _mapper.Map<CreateOrEditThingIDoViewModel>(thingIDo);
         }
 
         public async Task<bool> DeleteThingIDo(long id, CancellationToken cancellationToken)

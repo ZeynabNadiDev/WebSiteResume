@@ -1,4 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
+using Microsoft.EntityFrameworkCore;
+
 using Resume.Application.Services.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Repository;
@@ -8,6 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+
 namespace Resume.Application.Services.Implementations
 {
     public class InformationService : IInformationService
@@ -15,9 +19,11 @@ namespace Resume.Application.Services.Implementations
 
         #region Constructor InformationRepository
        private IInformationRepository _informationRepository;
-        public InformationService(IInformationRepository informationRepository)
+        private readonly IMapper _mapper;
+        public InformationService(IInformationRepository informationRepository,IMapper mapper)
         {
             _informationRepository = informationRepository;
+            _mapper = mapper;
         }
 
 
@@ -26,28 +32,10 @@ namespace Resume.Application.Services.Implementations
         public async Task<InformationViewModel> GetInformation(CancellationToken cancellationToken)
         {
             InformationViewModel information = await _informationRepository.GetEntities()
-                .Select(i => new InformationViewModel()
-                {
-                    Address = i.Address,
-                    Avatar = i.Avatar,
-                    DateOfBirth = i.DateOfBirth,
-                    Email = i.Email,
-                    Id = i.Id,
-                    Job = i.Job,
-                    Name = i.Name,
-                    Phone = i.Phone,
-                    ResumeFile = i.ResumeFile,
-                    MapSrc = i.MapSrc
-                })
-                .FirstOrDefaultAsync();
+              .ProjectTo<InformationViewModel>(_mapper.ConfigurationProvider)
+        .FirstOrDefaultAsync(cancellationToken);
 
-
-            if (information == null)
-            {
-                return new InformationViewModel();
-            }
-
-            return information;
+            return information ?? new InformationViewModel();
         }
 
         public async Task<Information?> GetInformationModel(CancellationToken cancellationToken)
@@ -61,18 +49,7 @@ namespace Resume.Application.Services.Implementations
 
             if (information == null) return new CreateOrEditInformationViewModel() { Id = 0 };
 
-            return new CreateOrEditInformationViewModel() {
-            Id = information.Id,
-            Address = information.Address,
-            Avatar = information.Avatar,
-            DateOfBirth = information.DateOfBirth,
-            Email = information.Email,
-            Job = information.Job,
-            MapSrc = information.MapSrc,
-            Name = information.Name,
-            Phone = information.Phone,
-            ResumeFile = information.ResumeFile
-            };
+            return _mapper.Map<CreateOrEditInformationViewModel>(information);
 
         }
 
@@ -80,17 +57,7 @@ namespace Resume.Application.Services.Implementations
         {
             if (information.Id == 0)
             {
-                var newInformation = new Information() {
-                    Address = information.Address,
-                    Avatar = information.Avatar,
-                    DateOfBirth = information.DateOfBirth,
-                    Email = information.Email,
-                    Job = information.Job,
-                    MapSrc = information.MapSrc,
-                    Name = information.Name,
-                    Phone = information.Phone,
-                    ResumeFile = information.ResumeFile
-                };
+                var newInformation = _mapper.Map<Information>(information);
 
                 await _informationRepository.AddAsync(newInformation,cancellationToken);
                 await _informationRepository.SaveChangeAsync(cancellationToken);
@@ -99,17 +66,13 @@ namespace Resume.Application.Services.Implementations
 
             Information currentInformation = await GetInformationModel(cancellationToken);
 
-            currentInformation.Address = information.Address;
-            currentInformation.Avatar = information.Avatar;
-            currentInformation.DateOfBirth = information.DateOfBirth;
-            currentInformation.Email = information.Email;
-            currentInformation.Job = information.Job;
-            currentInformation.MapSrc = information.MapSrc;
-            currentInformation.Name = information.Name;
-            currentInformation.Phone = information.Phone;
-            currentInformation.ResumeFile = information.ResumeFile;
 
-           _informationRepository.Update(currentInformation);
+            if (currentInformation == null)
+                return false;
+
+            _mapper.Map(information, currentInformation);
+
+            _informationRepository.Update(currentInformation);
             await _informationRepository.SaveChangeAsync(cancellationToken);
             return true;
 

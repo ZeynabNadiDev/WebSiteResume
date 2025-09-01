@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Resume.Application.Services.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Repository;
@@ -17,9 +18,11 @@ namespace Resume.Application.Services.Implementations
 
         #region Constructor EducationRepository
         private readonly IEducationRepository _educationRepository;
-        public EducationService(IEducationRepository educationRepository)
+        private readonly IMapper _mapper;
+        public EducationService(IEducationRepository educationRepository,IMapper mapper)
         {
             _educationRepository = educationRepository;
+            _mapper = mapper;
         }
         #endregion
 
@@ -32,16 +35,7 @@ namespace Resume.Application.Services.Implementations
         {
             var educations = await _educationRepository.GetAllOrderedAsync(cancellationToken);
 
-              return educations.Select(c => new EducationViewModel()
-                {
-                    Description = c.Description,
-                    EndDate = c.EndDate,
-                    Id = c.Id,
-                    StartDate = c.StartDate,
-                    Title = c.Title,
-                    Order = c.Order
-                })
-                .ToList();
+            return _mapper.Map<List<EducationViewModel>>(educations);
 
         }
 
@@ -53,29 +47,14 @@ namespace Resume.Application.Services.Implementations
 
             if (education == null) return new CreateOrEditEducationViewModel() { Id = 0 };
 
-            return new CreateOrEditEducationViewModel()
-            {
-                Id = education.Id,
-                Description = education.Description,
-                EndDate = education.EndDate,
-                Order = education.Order,
-                StartDate = education.StartDate,
-                Title = education.Title
-            };
+            return _mapper.Map<CreateOrEditEducationViewModel>(education);
         }
 
         public async Task<bool> CreateOrEditEducation(CreateOrEditEducationViewModel education,CancellationToken cancellationToken)
         {
             if (education.Id == 0)
             {
-                var newEducation = new Education()
-                {
-                    Description = education.Description,
-                    EndDate = education.EndDate,
-                    Order = education.Order,
-                    StartDate = education.StartDate,
-                    Title = education.Title
-                };
+                var newEducation = _mapper.Map<Education>(education);
 
                 await _educationRepository.AddAsync(newEducation,cancellationToken);
                 await _educationRepository.SaveChangeAsync(cancellationToken);
@@ -86,11 +65,7 @@ namespace Resume.Application.Services.Implementations
 
             if (currentEducation == null) return false;
 
-            currentEducation.Description = education.Description;
-            currentEducation.EndDate = education.EndDate;
-            currentEducation.Order = education.Order;
-            currentEducation.StartDate = education.StartDate;
-            currentEducation.Title = education.Title;
+            _mapper.Map(education, currentEducation);
 
             _educationRepository.Update(currentEducation);
             await _educationRepository.SaveChangeAsync(cancellationToken);

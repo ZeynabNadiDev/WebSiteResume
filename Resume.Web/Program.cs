@@ -1,24 +1,26 @@
-using GoogleReCaptcha.V3.Interface;
+using AutoMapper.Internal;
 using GoogleReCaptcha.V3;
+using GoogleReCaptcha.V3.Interface;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Resume.Application.Mapping;
 using Resume.Application.Services.Implementations;
 using Resume.Application.Services.Interfaces;
+using Resume.Domain.Repository;
 using Resume.Infra.Data.Context;
+using Resume.Infra.Data.Repository;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
-using System.Configuration;
-using Resume.Domain.Repository;
-using Resume.Infra.Data.Repository;
 
 namespace Resume.Web;
 
@@ -78,7 +80,21 @@ public class Program
         #region Encoder
         builder.Services.AddSingleton<HtmlEncoder>(HtmlEncoder.Create(allowedRanges: new[] { UnicodeRanges.All }));
         #endregion
-
+        #region Mapping
+        builder.Services.AddAutoMapper(cfg =>
+        {
+            cfg.AddProfile<CustomerFeedbackProfile>();
+            cfg.AddProfile<CustomerLogoProfile>();
+            cfg.AddProfile<EducationProfile>();
+            cfg.AddProfile<ExperienceProfile>();
+            cfg.AddProfile<InformationProfile>();
+            cfg.AddProfile<PortfolioProfile>();
+            cfg.AddProfile<SkillProfile>();
+            cfg.AddProfile<SocialMediaProfile>();
+            cfg.AddProfile<ThingToDoProfile>();
+        });
+    
+        #endregion
         var app = builder.Build();
 
         if (!app.Environment.IsDevelopment())

@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
+using Microsoft.EntityFrameworkCore;
 using Resume.Application.Security;
 using Resume.Application.Services.Interfaces;
 using Resume.Domain.Entity;
@@ -17,20 +19,17 @@ namespace Resume.Application.Services.Implementations
 
         #region Constructor MessageRepository
         private readonly IMessageRepository _messageRepository;
-        public MessageService(IMessageRepository messageRepository)
+        private readonly IMapper _mapper;
+        public MessageService(IMessageRepository messageRepository,IMapper mapper)
         {
             _messageRepository = messageRepository;
+            _mapper = mapper;
         }
         #endregion
 
         public async Task<bool> CreateMessage(CreateMessageViewModel message,CancellationToken cancellationToken)
         {
-            Message newMessage = new Message()
-            {
-                Email = message.Email.SanitizeText(),
-                Name = message.Name.SanitizeText(),
-                Text = message.Text.SanitizeText()
-            };
+            Message newMessage =_mapper.Map<Message>(message);
 
             await _messageRepository.AddAsync(newMessage,cancellationToken);
             await _messageRepository.SaveChangeAsync(cancellationToken);
@@ -42,14 +41,8 @@ namespace Resume.Application.Services.Implementations
         public async Task<List<MessageViewModel>> GetAllMessages(CancellationToken cancellationToken)
         {
             List<MessageViewModel> messages = await _messageRepository.GetEntities()
-                .Select(m => new MessageViewModel()
-                {
-                    Id = m.Id,
-                    Email = m.Email,
-                    Name = m.Name,
-                    Text = m.Text
-                })
-                .ToListAsync(cancellationToken);
+                 .ProjectTo<MessageViewModel>(_mapper.ConfigurationProvider)
+                 .ToListAsync(cancellationToken);
 
             return messages;
         }

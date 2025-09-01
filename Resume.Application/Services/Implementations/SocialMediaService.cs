@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Resume.Application.Services.Interfaces;
 using Resume.Domain.Repository;
 using Resume.Domain.ViewModels.SocialMedia;
@@ -15,10 +16,12 @@ namespace Resume.Application.Services.Implementations
 
         #region Constructor SocialMediaRepository
        private readonly ISocialMediaRepository _socialMediaRepository;
+        private readonly IMapper _mapper;
 
-        public SocialMediaService(ISocialMediaRepository socialMediaRepository)
+        public SocialMediaService(ISocialMediaRepository socialMediaRepository,IMapper mapper)
         {
             _socialMediaRepository = socialMediaRepository;
+            _mapper = mapper;
         }
         #endregion
 
@@ -26,16 +29,9 @@ namespace Resume.Application.Services.Implementations
         {
             var socialMedias = await _socialMediaRepository.GetAllOrderedAsync(cancellationToken);
 
-            return socialMedias.Select(s => new SocialMediaViewModel()
-                {
-                    Id = s.Id,
-                    Icon = s.Icon,
-                    Order = s.Order,
-                    Link = s.Link
-                })
-                .ToList();
+            return _mapper.Map<List<SocialMediaViewModel>>(socialMedias);
 
-            
+
         }
 
 

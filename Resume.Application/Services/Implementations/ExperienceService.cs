@@ -1,6 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Resume.Application.Services.Interfaces;
+using Resume.Domain.Entity;
 using Resume.Domain.Repository;
+using Resume.Domain.ViewModels.Education;
 using Resume.Domain.ViewModels.Experience;
 using Resume.Infra.Data.Context;
 using System.Collections.Generic;
@@ -15,26 +18,19 @@ namespace Resume.Application.Services.Implementations
 
         #region Constructor ExperienceRepository
         private readonly IExperienceRepository _experienceRepository;
-        public ExperienceService(IExperienceRepository experienceRepository)
+        private readonly IMapper _mapper;
+        public ExperienceService(IExperienceRepository experienceRepository,IMapper mapper)
         {
             _experienceRepository = experienceRepository;
+            _mapper = mapper;
         }
         #endregion
 
 
         public async Task<List<ExperienceViewModel>> GetAllExperiences(CancellationToken cancellationToken)
         {
-            var experiences = await _experienceRepository.GetAllOrderedAsync(cancellationToken); 
-                  return experiences.Select(c => new ExperienceViewModel()
-                    {
-                        Description = c.Description,
-                        EndDate = c.EndDate,
-                        Id = c.Id,
-                        StartDate = c.StartDate,
-                        Title = c.Title,
-                        Order = c.Order
-                    })
-                    .ToList();
+            var experiences = await _experienceRepository.GetAllOrderedAsync(cancellationToken);
+            return _mapper.Map<List<ExperienceViewModel>>(experiences);
         }
     }
 }

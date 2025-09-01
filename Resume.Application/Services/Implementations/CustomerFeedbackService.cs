@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Resume.Application.Services.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Repository;
@@ -18,10 +19,12 @@ namespace Resume.Application.Services.Implementations
 
         #region Constructor ICustomerFeedbackRepository
         private readonly ICustomerFeedbackRepository _customerFeedbackRepository;
+        private readonly IMapper _mapper;
 
-        public CustomerFeedbackService(ICustomerFeedbackRepository customerFeedbackRepository)
+        public CustomerFeedbackService(ICustomerFeedbackRepository customerFeedbackRepository,IMapper mapper)
         {
             _customerFeedbackRepository= customerFeedbackRepository;
+            _mapper= mapper;
         }
 
         #endregion
@@ -36,28 +39,14 @@ namespace Resume.Application.Services.Implementations
             var customerFeedbacks = await _customerFeedbackRepository.GetAllOrderedAsync(cancellationToken);
 
 
-               return customerFeedbacks.Select(c => new CustomerFeedbackViewModel()
-                {
-                    Order = c.Order,
-                    Avatar = c.Avatar,
-                    Description = c.Description,
-                    Id = c.Id,
-                    Name = c.Name
-                })
-                .ToList();
+            return _mapper.Map<List<CustomerFeedbackViewModel>>(customerFeedbacks);
         }
 
         public async Task<bool> CreateOrEditCustomerFeedbackAsync(CreateOrEditCustomerFeedbackViewModel customerFeedback,CancellationToken cancellationToken)
         {
             if (customerFeedback.Id == 0)
             {
-                var newCustomerFeedback = new CustomerFeedback()
-                {
-                    Avatar = customerFeedback.Avatar,
-                    Description = customerFeedback.Description,
-                    Name = customerFeedback.Name,
-                    Order = customerFeedback.Order
-                };
+                var newCustomerFeedback = _mapper.Map<CustomerFeedback>(customerFeedback);
 
                 await _customerFeedbackRepository.AddAsync(newCustomerFeedback,cancellationToken);
                 await _customerFeedbackRepository.SaveChangeAsync(cancellationToken);
@@ -70,10 +59,7 @@ namespace Resume.Application.Services.Implementations
 
             if (currentCustomerFeedback == null) return false;
 
-            currentCustomerFeedback.Avatar = customerFeedback.Avatar;
-            currentCustomerFeedback.Description = customerFeedback.Description;
-            currentCustomerFeedback.Name = customerFeedback.Name;
-            currentCustomerFeedback.Order = customerFeedback.Order;
+            _mapper.Map(customerFeedback, currentCustomerFeedback);
 
             _customerFeedbackRepository.Update(currentCustomerFeedback);
             await _customerFeedbackRepository.SaveChangeAsync(cancellationToken);
@@ -89,14 +75,7 @@ namespace Resume.Application.Services.Implementations
 
             if (customerFeedback == null) return new CreateOrEditCustomerFeedbackViewModel() { Id = 0 };
 
-            return new CreateOrEditCustomerFeedbackViewModel()
-            {
-                Id = customerFeedback.Id,
-                Avatar = customerFeedback.Avatar,
-                Description = customerFeedback.Description,
-                Name = customerFeedback.Name,
-                Order = customerFeedback.Order
-            };
+            return _mapper.Map<CreateOrEditCustomerFeedbackViewModel>(customerFeedback);
 
         }
 

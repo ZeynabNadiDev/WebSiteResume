@@ -1,4 +1,4 @@
-﻿using Ganss.XSS;
+﻿using Ganss.Xss;
 
 namespace Resume.Application.Security
 {
