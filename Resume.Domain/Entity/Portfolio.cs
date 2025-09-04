@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using Resume.Domain.Entity.InterfaceEntity;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace Resume.Domain.Entity
 {
-    public class Portfolio
+    public class Portfolio:IEntity
     {
 
         [Key]
@@ -41,7 +42,7 @@ namespace Resume.Domain.Entity
     }
 
 
-    public class PortfolioCategory
+    public class PortfolioCategory:IEntity
     {
 
         [Key]

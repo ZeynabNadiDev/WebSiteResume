@@ -3,8 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Resume.Application.Services.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Repository;
+using Resume.Domain.UnitOfWorks.Interface;
 using Resume.Domain.ViewModels.Portfolio;
-using Resume.Infra.Data.Context;
+
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -19,12 +20,15 @@ namespace Resume.Application.Services.Implementations
         private readonly IPortfolioRepository _portfolioRepository;
         private readonly IPortfolioCategoryRepository _portfolioCategoryRepository;
         private readonly IMapper _mapper;
+        private readonly IUnitOfWork _uow;
 
-        public PortfolioService(IPortfolioRepository portfolioRepository, IPortfolioCategoryRepository portfolioCategoryRepository,IMapper mapper)
+        public PortfolioService(IPortfolioRepository portfolioRepository, 
+            IPortfolioCategoryRepository portfolioCategoryRepository,IMapper mapper,IUnitOfWork unit)
         {
             _portfolioRepository = portfolioRepository;
             _portfolioCategoryRepository = portfolioCategoryRepository;
             _mapper = mapper;
+            _uow = unit;
         }
         #endregion
 
@@ -70,7 +74,7 @@ namespace Resume.Application.Services.Implementations
             {
                 var newPortfolio = _mapper.Map<Portfolio>(portfolio);
                 await _portfolioRepository.AddAsync(newPortfolio,cancellationToken);
-                await _portfolioRepository.SaveChangeAsync(cancellationToken);
+                await _uow.SaveChangesAsync(cancellationToken);
                 return true;
             }
 
@@ -80,7 +84,7 @@ namespace Resume.Application.Services.Implementations
             _mapper.Map(portfolio, currnetPortfolio);
 
             _portfolioRepository.Update(currnetPortfolio);
-            await _portfolioRepository.SaveChangeAsync(cancellationToken);
+            await _uow.SaveChangesAsync(cancellationToken);
             return true;
         }
 
@@ -91,7 +95,7 @@ namespace Resume.Application.Services.Implementations
             if (portfolio == null) return false;
 
             _portfolioRepository.Delete(portfolio);
-            await _portfolioRepository.SaveChangeAsync(cancellationToken);
+            await _uow.SaveChangesAsync(cancellationToken);
             return true;
         }
 
@@ -130,7 +134,7 @@ namespace Resume.Application.Services.Implementations
             {
                 var newPortfolioCategory = _mapper.Map<PortfolioCategory>(portfolioCategory);
                 await _portfolioCategoryRepository.AddAsync(newPortfolioCategory, cancellationToken);
-                await _portfolioCategoryRepository.SaveChangeAsync(cancellationToken);
+                await _uow.SaveChangesAsync(cancellationToken);
                 return true;
             }
 
@@ -141,7 +145,7 @@ namespace Resume.Application.Services.Implementations
             _mapper.Map(portfolioCategory, currentPortfolioCategory);
 
             _portfolioCategoryRepository.Update(currentPortfolioCategory);
-            await _portfolioCategoryRepository.SaveChangeAsync(cancellationToken);
+            await _uow.SaveChangesAsync(cancellationToken);
 
             return true;
         }
@@ -153,7 +157,7 @@ namespace Resume.Application.Services.Implementations
             if (portfolioCategory == null) return false;
 
            _portfolioCategoryRepository.Delete(portfolioCategory);
-            await _portfolioCategoryRepository.SaveChangeAsync(cancellationToken);
+            await _uow.SaveChangesAsync(cancellationToken);
 
             return true;
         }

@@ -1,9 +1,10 @@
-﻿using Resume.Domain.Entity.Reservation.Common;
+﻿using Resume.Domain.Entity.InterfaceEntity;
+using Resume.Domain.Entity.Reservation.Common;
 using System.Collections.Generic;
 
 namespace Resume.Domain.Entity.Reservation;
 
-public class ReservationDateTime : BaseEntity<ulong>
+public class ReservationDateTime : BaseEntity<ulong>, IEntity
 {
     public string StartTime { get; set; }
     public string EndTime { get; set; }

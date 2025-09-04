@@ -4,7 +4,7 @@ using Resume.Application.Services.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Repository;
 using Resume.Domain.ViewModels.CustomerFeedback;
-using Resume.Infra.Data.Context;
+using Resume.Domain.UnitOfWorks.Interface;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,11 +20,14 @@ namespace Resume.Application.Services.Implementations
         #region Constructor ICustomerFeedbackRepository
         private readonly ICustomerFeedbackRepository _customerFeedbackRepository;
         private readonly IMapper _mapper;
+        private readonly IUnitOfWork _uow;
 
-        public CustomerFeedbackService(ICustomerFeedbackRepository customerFeedbackRepository,IMapper mapper)
+        public CustomerFeedbackService(ICustomerFeedbackRepository customerFeedbackRepository,IMapper mapper,IUnitOfWork unit)
         {
             _customerFeedbackRepository= customerFeedbackRepository;
             _mapper= mapper;
+            _uow= unit;
+
         }
 
         #endregion
@@ -49,7 +52,7 @@ namespace Resume.Application.Services.Implementations
                 var newCustomerFeedback = _mapper.Map<CustomerFeedback>(customerFeedback);
 
                 await _customerFeedbackRepository.AddAsync(newCustomerFeedback,cancellationToken);
-                await _customerFeedbackRepository.SaveChangeAsync(cancellationToken);
+                await _uow.SaveChangesAsync(cancellationToken);
 
                 return true;
             }
@@ -62,7 +65,7 @@ namespace Resume.Application.Services.Implementations
             _mapper.Map(customerFeedback, currentCustomerFeedback);
 
             _customerFeedbackRepository.Update(currentCustomerFeedback);
-            await _customerFeedbackRepository.SaveChangeAsync(cancellationToken);
+            await _uow.SaveChangesAsync(cancellationToken);
 
             return true;
         }
@@ -86,7 +89,7 @@ namespace Resume.Application.Services.Implementations
             if (customerFeedback == null) return false;
 
             _customerFeedbackRepository.Delete(customerFeedback);
-            await _customerFeedbackRepository.SaveChangeAsync(cancellationToken) ;
+            await _uow.SaveChangesAsync(cancellationToken) ;
 
             return true;
         }

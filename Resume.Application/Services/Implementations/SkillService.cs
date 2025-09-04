@@ -3,8 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Resume.Application.Services.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Repository;
+using Resume.Domain.UnitOfWorks.Interface;
 using Resume.Domain.ViewModels.Skill;
-using Resume.Infra.Data.Context;
+
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -18,10 +19,12 @@ namespace Resume.Application.Services.Implementations
         #region Constructor SkillRepository
         private readonly ISkillRepository _skillRepository;
         private readonly IMapper _mapper;
-        public SkillService(ISkillRepository skillRepository,IMapper mapper)
+        private readonly IUnitOfWork _uow;
+        public SkillService(ISkillRepository skillRepository,IMapper mapper,IUnitOfWork unit)
         {
             _skillRepository = skillRepository;
             _mapper = mapper;
+            _uow = unit;
         }
         #endregion
 
@@ -55,7 +58,7 @@ namespace Resume.Application.Services.Implementations
                 var newSkill = _mapper.Map<Skill>(skill);
 
                 await _skillRepository.AddAsync(newSkill,cancellationToken);
-                await _skillRepository.SaveChangeAsync(cancellationToken);
+                await _uow.SaveChangesAsync(cancellationToken);
                 return true;
             }
 
@@ -65,7 +68,7 @@ namespace Resume.Application.Services.Implementations
 
             _mapper.Map(skill, currentSkill);
             _skillRepository.Update(currentSkill);
-            await _skillRepository.SaveChangeAsync(cancellationToken);
+            await _uow.SaveChangesAsync(cancellationToken);
             return true;
         }
 
@@ -76,7 +79,7 @@ namespace Resume.Application.Services.Implementations
             if (skill == null) return false;
 
             _skillRepository.Delete(skill);
-            await _skillRepository.SaveChangeAsync(cancellationToken);
+            await _uow.SaveChangesAsync(cancellationToken);
             return true;
         }
 

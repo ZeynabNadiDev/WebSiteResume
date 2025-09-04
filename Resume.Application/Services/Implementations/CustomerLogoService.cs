@@ -3,8 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Resume.Application.Services.Interfaces;
 using Resume.Domain.Repository;
 using Resume.Domain.ViewModels.CustomerLogo;
-using Resume.Infra.Data.Context;
-using Resume.Infra.Data.Repository;
+
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;

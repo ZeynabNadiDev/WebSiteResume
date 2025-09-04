@@ -5,6 +5,7 @@ using Resume.Application.Services.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Entity.Reservation;
 using Resume.Domain.Repository;
+using Resume.Domain.UnitOfWorks.Interface;
 using Resume.Domain.ViewModels.Reservation;
 using System;
 using System.Collections.Generic;
@@ -18,10 +19,12 @@ public class ReservationService : IReservationService
     #region Constructor ReservationRepository
     private readonly IReservationRepository _reservationRepository;
     private readonly IMapper _mapper;
-    public ReservationService(IReservationRepository reservationRepository,IMapper mapper)
+    private readonly IUnitOfWork _uow;
+    public ReservationService(IReservationRepository reservationRepository,IMapper mapper,IUnitOfWork unit)
     {
         _reservationRepository = reservationRepository;
         _mapper = mapper;
+        _uow = unit;
     }
     #endregion
     public async Task<List<ReservationDate>> GetListOfReservations(CancellationToken cancellationToken)
@@ -34,7 +37,7 @@ public class ReservationService : IReservationService
         {
             Date = date.ToMiladiDateTime()
         } , cancellationToken);
-        await _reservationRepository.SaveChangeAsync(cancellationToken);
+        await _uow.SaveChangesAsync(cancellationToken);
 
         return true;
     }
@@ -55,7 +58,7 @@ public class ReservationService : IReservationService
         originalRecord.Date = date.ToMiladiDateTime();
 
         _reservationRepository.Update(originalRecord);
-        await _reservationRepository.SaveChangeAsync(cancellationToken);
+        await _uow.SaveChangesAsync(cancellationToken);
 
         return true;
     }
@@ -86,7 +89,7 @@ public class ReservationService : IReservationService
             newReservationDate.Date = reservationDate.ReservationDate.ToMiladiDateTime();
 
             await _reservationRepository.AddAsync(newReservationDate , cancellationToken);
-            await _reservationRepository.SaveChangeAsync(cancellationToken);
+            await _uow.SaveChangesAsync(cancellationToken);
             return true;
         }
 
@@ -98,7 +101,7 @@ public class ReservationService : IReservationService
         currentReservationDate.Date = reservationDate.ReservationDate.ToMiladiDateTime();
 
         _reservationRepository.Update(currentReservationDate);
-        await _reservationRepository.SaveChangeAsync(cancellationToken);
+        await _uow.SaveChangesAsync(cancellationToken);
 
         return true;
     }
@@ -112,7 +115,7 @@ public class ReservationService : IReservationService
         reservationDate.IsDelete = true;
 
         _reservationRepository.Update(reservationDate);
-        await _reservationRepository.SaveChangeAsync(cancellationToken);
+        await _uow.SaveChangesAsync(cancellationToken);
 
         return true;
     }

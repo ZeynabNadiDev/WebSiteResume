@@ -3,8 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Resume.Application.Services.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Repository;
+using Resume.Domain.UnitOfWorks.Interface;
 using Resume.Domain.ViewModels.ThingIDo;
-using Resume.Infra.Data.Context;
+
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -18,10 +19,12 @@ namespace Resume.Application.Services.Implementations
         #region Constructor ThingIDoRepository
         private readonly IThingIDoRepository _thingIDoRepository;
         private readonly IMapper _mapper;
-        public ThingIDoService(IThingIDoRepository thingIDoRepository,IMapper mapper)
+        private readonly IUnitOfWork _uow;
+        public ThingIDoService(IThingIDoRepository thingIDoRepository,IMapper mapper,IUnitOfWork unit)
         {
             _thingIDoRepository = thingIDoRepository;
             _mapper = mapper;
+            _uow = unit;
         }
         #endregion
 
@@ -48,7 +51,7 @@ namespace Resume.Application.Services.Implementations
 
 
                 await _thingIDoRepository.AddAsync(newThingIDo,cancellationToken);
-                await _thingIDoRepository.SaveChangeAsync(cancellationToken);
+                await _uow.SaveChangesAsync(cancellationToken);
 
                 return true;
             }
@@ -60,7 +63,7 @@ namespace Resume.Application.Services.Implementations
             _mapper.Map(thingIDo, currentThingIDo);
 
             _thingIDoRepository.Update(currentThingIDo);
-            await _thingIDoRepository.SaveChangeAsync(cancellationToken);
+            await _uow.SaveChangesAsync(cancellationToken);
 
             return true;
         }
@@ -83,7 +86,7 @@ namespace Resume.Application.Services.Implementations
             if (thingIDo == null) return false;
 
             _thingIDoRepository.Delete(thingIDo);
-            await _thingIDoRepository.SaveChangeAsync(cancellationToken);
+            await _uow.SaveChangesAsync(cancellationToken);
 
             return true;
         }

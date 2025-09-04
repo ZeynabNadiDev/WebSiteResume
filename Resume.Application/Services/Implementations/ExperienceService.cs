@@ -5,7 +5,7 @@ using Resume.Domain.Entity;
 using Resume.Domain.Repository;
 using Resume.Domain.ViewModels.Education;
 using Resume.Domain.ViewModels.Experience;
-using Resume.Infra.Data.Context;
+
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;

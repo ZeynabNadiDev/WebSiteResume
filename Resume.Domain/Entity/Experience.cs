@@ -1,9 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Resume.Domain.Entity.InterfaceEntity;
+using System.ComponentModel.DataAnnotations;
 
 
 namespace Resume.Domain.Entity
 {
-    public class Experience
+    public class Experience:IEntity
     {
 
         [Key]

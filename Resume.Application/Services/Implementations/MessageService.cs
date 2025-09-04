@@ -5,8 +5,9 @@ using Resume.Application.Security;
 using Resume.Application.Services.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Repository;
+using Resume.Domain.UnitOfWorks.Interface;
 using Resume.Domain.ViewModels.Message;
-using Resume.Infra.Data.Context;
+
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -20,10 +21,12 @@ namespace Resume.Application.Services.Implementations
         #region Constructor MessageRepository
         private readonly IMessageRepository _messageRepository;
         private readonly IMapper _mapper;
-        public MessageService(IMessageRepository messageRepository,IMapper mapper)
+        private readonly IUnitOfWork _uow;
+        public MessageService(IMessageRepository messageRepository,IMapper mapper,IUnitOfWork unit)
         {
             _messageRepository = messageRepository;
             _mapper = mapper;
+            _uow = unit;
         }
         #endregion
 
@@ -32,7 +35,7 @@ namespace Resume.Application.Services.Implementations
             Message newMessage =_mapper.Map<Message>(message);
 
             await _messageRepository.AddAsync(newMessage,cancellationToken);
-            await _messageRepository.SaveChangeAsync(cancellationToken);
+            await _uow.SaveChangesAsync(cancellationToken);
 
             return true;
         }
@@ -55,7 +58,7 @@ namespace Resume.Application.Services.Implementations
             if (message == null) return false;
 
             _messageRepository.Delete(message);
-            await _messageRepository.SaveChangeAsync(cancellationToken) ;
+            await _uow.SaveChangesAsync(cancellationToken) ;
 
             return true;
         }

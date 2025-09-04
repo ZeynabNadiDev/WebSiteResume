@@ -1,9 +1,10 @@
-﻿using System;
+﻿using Resume.Domain.Entity.InterfaceEntity;
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace Resume.Domain.Entity
 {
-    public class ThingIDo
+    public class ThingIDo:IEntity
     {
 
         #region Properties

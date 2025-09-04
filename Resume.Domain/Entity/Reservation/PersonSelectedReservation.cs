@@ -1,8 +1,9 @@
-﻿using Resume.Domain.Entity.Reservation.Common;
+﻿using Resume.Domain.Entity.InterfaceEntity;
+using Resume.Domain.Entity.Reservation.Common;
 
 namespace Resume.Domain.Entity.Reservation;
 
-public class PersonSelectedReservation : BaseEntity<ulong>
+public class PersonSelectedReservation : BaseEntity<ulong>,IEntity
 {
     public string FirstName { get; set; }
     public string LastName { get; set; }

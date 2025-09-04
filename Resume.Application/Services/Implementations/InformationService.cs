@@ -5,8 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using Resume.Application.Services.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Repository;
+using Resume.Domain.UnitOfWorks.Interface;
 using Resume.Domain.ViewModels.Information;
-using Resume.Infra.Data.Context;
+
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,10 +21,12 @@ namespace Resume.Application.Services.Implementations
         #region Constructor InformationRepository
        private IInformationRepository _informationRepository;
         private readonly IMapper _mapper;
-        public InformationService(IInformationRepository informationRepository,IMapper mapper)
+        private readonly IUnitOfWork _uow;
+        public InformationService(IInformationRepository informationRepository,IMapper mapper,IUnitOfWork unit)
         {
             _informationRepository = informationRepository;
             _mapper = mapper;
+            _uow = unit;
         }
 
 
@@ -60,7 +63,7 @@ namespace Resume.Application.Services.Implementations
                 var newInformation = _mapper.Map<Information>(information);
 
                 await _informationRepository.AddAsync(newInformation,cancellationToken);
-                await _informationRepository.SaveChangeAsync(cancellationToken);
+                await _uow.SaveChangesAsync(cancellationToken);
                 return true;
             }
 
@@ -73,7 +76,7 @@ namespace Resume.Application.Services.Implementations
             _mapper.Map(information, currentInformation);
 
             _informationRepository.Update(currentInformation);
-            await _informationRepository.SaveChangeAsync(cancellationToken);
+            await _uow.SaveChangesAsync(cancellationToken);
             return true;
 
         }

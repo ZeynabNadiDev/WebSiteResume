@@ -39,7 +39,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Resume.Domain\Resume.Domain.csproj" />
-    <ProjectReference Include="..\Resume.Infra.Data\Resume.Infra.Data.csproj" />
   </ItemGroup>
 
 </Project>

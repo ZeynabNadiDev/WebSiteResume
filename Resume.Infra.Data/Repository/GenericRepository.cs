@@ -8,10 +8,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Resume.Domain.Entity;
+using Resume.Domain.Entity.InterfaceEntity;
 
 namespace Resume.Infra.Data.Repository
 {
-    public class GenericRepository<TEntity>:IGenericRepository<TEntity> where TEntity : class
+    public class GenericRepository<TEntity>:IGenericRepository<TEntity> where TEntity : class,IEntity
     {
         protected readonly AppDbContext _context;
         protected readonly DbSet<TEntity> _dbSet;
@@ -41,10 +42,7 @@ namespace Resume.Infra.Data.Repository
         {
             _dbSet.Remove(entity);
         }
-       public async Task SaveChangeAsync(CancellationToken cancellationToken)
-        {
-           await _context.SaveChangesAsync(cancellationToken);
-        }
+      
         public IQueryable<TEntity> GetEntities()
         {
             return _dbSet.AsQueryable();

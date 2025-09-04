@@ -12,8 +12,10 @@ using Resume.Application.Mapping;
 using Resume.Application.Services.Implementations;
 using Resume.Application.Services.Interfaces;
 using Resume.Domain.Repository;
+using Resume.Domain.UnitOfWorks.Interface;
 using Resume.Infra.Data.Context;
 using Resume.Infra.Data.Repository;
+using Resume.Infra.Data.UnitOfWork;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -71,6 +73,9 @@ public class Program
         builder.Services.AddScoped<IThingIDoRepository, ThingIDoRepository>();
         builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 
+        //UnitOfWork
+        builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
         #region Google Recaptcha
         builder.Services.AddHttpClient<ICaptchaValidator, GoogleReCaptchaValidator>();
         #endregion
@@ -80,6 +85,7 @@ public class Program
         #region Encoder
         builder.Services.AddSingleton<HtmlEncoder>(HtmlEncoder.Create(allowedRanges: new[] { UnicodeRanges.All }));
         #endregion
+
         #region Mapping
         builder.Services.AddAutoMapper(cfg =>
         {
@@ -95,6 +101,7 @@ public class Program
         });
     
         #endregion
+
         var app = builder.Build();
 
         if (!app.Environment.IsDevelopment())
