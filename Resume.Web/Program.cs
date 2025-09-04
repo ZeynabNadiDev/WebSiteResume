@@ -23,6 +23,7 @@ using System.Linq;
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
 using System.Threading.Tasks;
+using Resume.Application.Eetensions;
 
 namespace Resume.Web;
 
@@ -87,19 +88,9 @@ public class Program
         #endregion
 
         #region Mapping
-        builder.Services.AddAutoMapper(cfg =>
-        {
-            cfg.AddProfile<CustomerFeedbackProfile>();
-            cfg.AddProfile<CustomerLogoProfile>();
-            cfg.AddProfile<EducationProfile>();
-            cfg.AddProfile<ExperienceProfile>();
-            cfg.AddProfile<InformationProfile>();
-            cfg.AddProfile<PortfolioProfile>();
-            cfg.AddProfile<SkillProfile>();
-            cfg.AddProfile<SocialMediaProfile>();
-            cfg.AddProfile<ThingToDoProfile>();
-        });
-    
+
+        builder.Services.CondigureApplicationServices();
+
         #endregion
 
         var app = builder.Build();
