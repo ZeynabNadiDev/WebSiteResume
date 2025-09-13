@@ -1,6 +1,8 @@
 ﻿using GoogleReCaptcha.V3.Interface;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Resume.Application.Services.Interfaces;
+using Resume.Application.CQRS.Commands.Messages;
+using Resume.Application.CQRS.Queries.Informations;
 using Resume.Domain.ViewModels.Message;
 using System;
 using System.Collections.Generic;
@@ -14,15 +16,15 @@ namespace Resume.Web.Controllers
     {
 
         #region Constructor
-        private readonly IMessageService _messageService;
+        
         private readonly ICaptchaValidator _captchaValidator;
-        private readonly IInformationService _informationService;
+        private readonly IMediator _mediator;
 
-        public ContactController(IMessageService messageService, ICaptchaValidator captchaValidator, IInformationService informationService)
+        public ContactController(ICaptchaValidator captchaValidator, IMediator mediator)
         {
-            _messageService = messageService;
+            
             _captchaValidator = captchaValidator;
-            _informationService = informationService;
+            _mediator = mediator;
         }
         #endregion
 
@@ -30,7 +32,8 @@ namespace Resume.Web.Controllers
         public async Task<IActionResult> Index(CancellationToken cancellationToken)
         {
 
-            ViewData["Information"] = await _informationService.GetInformation(cancellationToken);
+            var information = await _mediator.Send(new GetInformationQuery(),cancellationToken);
+            ViewData["Information"] = information;
             return View();
         }
 
@@ -39,7 +42,7 @@ namespace Resume.Web.Controllers
         public async Task<IActionResult> Index(CreateMessageViewModel message,CancellationToken cancellationToken)
         {
 
-            ViewData["Information"] = await _informationService.GetInformation(cancellationToken);
+            ViewData["Information"] = await _mediator.Send(new GetInformationQuery(),cancellationToken);
 
             if (!await _captchaValidator.IsCaptchaPassedAsync(message.Captcha))
             {
@@ -52,7 +55,7 @@ namespace Resume.Web.Controllers
                 return View(message);
             }
 
-            var result = await _messageService.CreateMessage(message, cancellationToken);
+            var result = await _mediator.Send(new CreateMessageCommand(message),cancellationToken);
 
             if (result)
             {

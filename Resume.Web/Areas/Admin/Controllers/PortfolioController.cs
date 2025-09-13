@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Resume.Application.CQRS.Commands.Portfolios;
+using Resume.Application.CQRS.Queries.Portfolios;
 using Resume.Application.Eetensions;
 using Resume.Application.Generator;
-using Resume.Application.Services.Interfaces;
 using Resume.Application.StaticTools;
 using Resume.Domain.ViewModels.Portfolio;
 using Resume.Web.Areas.Controllers;
@@ -15,36 +17,36 @@ namespace Resume.Web.Areas.Admin.Controllers
     public class PortfolioController : AdminBaseController
     {
         #region Constructor
-        private readonly IPortfolioService _portfolioService;
+        private readonly IMediator _mediator;
 
-        public PortfolioController(IPortfolioService portfolioService)
+        public PortfolioController(IMediator mediator)
         {
-            _portfolioService = portfolioService;
+            _mediator = mediator;
         }
         #endregion
 
 
         public async Task<IActionResult> Index(CancellationToken cancellationToken)
         {
-            return View(await _portfolioService.GetAllPortfolios(cancellationToken));
+            return View(await _mediator.Send(new GetAllPortfoliosQuery(),cancellationToken));
         }
 
         public async Task<IActionResult> LoadPortfolioFormModal(long id,CancellationToken cancellationToken)
         {
-            CreateOrEditPortfolioViewModel result = await _portfolioService.FillCreateOrEditPortfolioViewModel(id, cancellationToken);
+            CreateOrEditPortfolioViewModel result = await _mediator.Send(new FillCreateOrEditPortfolioViewModelQuery(id), cancellationToken);
             return PartialView("_PortfolioFormModalPartial", result);
         }
 
         public async Task<IActionResult> SubmitPortfolioFormModal(CreateOrEditPortfolioViewModel portfolio,CancellationToken cancellationToken)
         {
-            var result = await _portfolioService.CreateOrEditPortfolio(portfolio, cancellationToken);
+            var result = await _mediator.Send(new CreateOrEditPortfolioCommand(portfolio), cancellationToken);
             if (result) return new JsonResult(new { status = "Success" });
             return new JsonResult(new { status = "Error" });
         }
 
         public async Task<IActionResult> DeletePortfolio(long id,CancellationToken cancellationToken)
         {
-            var result = await _portfolioService.DeletePortfolio(id, cancellationToken);
+            var result = await _mediator.Send(new DeletePortfolioCommand(id), cancellationToken);
             if (result) return new JsonResult(new { status = "Success" });
             return new JsonResult(new { status = "Error" });
         }

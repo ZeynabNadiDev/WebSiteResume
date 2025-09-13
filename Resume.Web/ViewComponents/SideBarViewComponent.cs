@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Resume.Application.Services.Interfaces;
+﻿using MediatR;
+using Microsoft.AspNetCore.Mvc;
+using Resume.Application.CQRS.Queries.Informations;
+using Resume.Application.CQRS.Queries.SocialMedias;
 using Resume.Domain.ViewModels.ViewComponent;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,13 +11,12 @@ namespace Resume.Web.ViewComponents
     public class SideBarViewComponent : ViewComponent
     {
         #region Constructor
-        private readonly ISocialMediaService _socialMediaService;
-        private readonly IInformationService _informationService;
+        private readonly  IMediator _mediator;
+        
 
-        public SideBarViewComponent(ISocialMediaService socialMediaService, IInformationService informationService)
+        public SideBarViewComponent(IMediator mediator)
         {
-            _socialMediaService = socialMediaService;
-            _informationService = informationService;
+            _mediator = mediator;
         }
         #endregion
 
@@ -23,8 +24,8 @@ namespace Resume.Web.ViewComponents
         {
             SideBarViewModel model = new SideBarViewModel()
             {
-                SocialMedias = await _socialMediaService.GetAllSocialMedias(cancellationToken),
-                information = await _informationService.GetInformation(cancellationToken)
+                SocialMedias = await _mediator.Send(new GetAllSocialMediasQuery(),cancellationToken),
+                information = await _mediator.Send(new GetInformationQuery(),cancellationToken)
             };
 
             return View("SideBar", model);

@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Resume.Application.Services.Interfaces;
+﻿using MediatR;
+using Microsoft.AspNetCore.Mvc;
+using Resume.Application.CQRS.Queries.PortfolioCategories;
+using Resume.Application.CQRS.Queries.Portfolios;
 using Resume.Domain.ViewModels.Page;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,11 +11,11 @@ namespace Resume.Web.Controllers
     public class PortfolioController : Controller
     {
         #region Constructor
-        private readonly IPortfolioService _porfolioService;
+        private readonly IMediator _mediator;
 
-        public PortfolioController(IPortfolioService porfolioService)
+        public PortfolioController(IMediator mediator)
         {
-            _porfolioService = porfolioService;
+            _mediator = mediator;
         }
         #endregion
 
@@ -21,9 +23,13 @@ namespace Resume.Web.Controllers
         public async Task<IActionResult> Index(CancellationToken cancellationToken)
         {
 
-            PortfolioPageViewModel model = new PortfolioPageViewModel() {
-                Portfolios = await _porfolioService.GetAllPortfolios(cancellationToken),
-                PortfolioCategories = await _porfolioService.GetAllPortfolioCategories(cancellationToken)
+
+          var  portfolios = await _mediator.Send(new GetAllPortfoliosQuery(), cancellationToken);
+          var  portfolioCategories = await _mediator.Send(new GetAllPortfolioCategoriesQuery(), cancellationToken);
+            var model = new PortfolioPageViewModel
+            {
+                Portfolios = portfolios,
+                PortfolioCategories = portfolioCategories
             };
 
             return View(model);

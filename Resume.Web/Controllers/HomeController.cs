@@ -1,5 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Resume.Application.Services.Interfaces;
+﻿using MediatR;
+using Microsoft.AspNetCore.Mvc;
+using Resume.Application.CQRS.Queries.CustomerFeedbacks;
+using Resume.Application.CQRS.Queries.CustomerLogos;
+using Resume.Application.CQRS.Queries.ThingIDos;
 using Resume.Domain.ViewModels.Page;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,16 +13,16 @@ namespace Resume.Web.Controllers
     {
 
         #region Constructor
-        private readonly IThingIDoService _thingIDoService;
-        private readonly ICustomerFeedbackService _customerFeedbackService;
-        private readonly ICustomerLogoService _customerLogoService;
+        
+        private readonly IMediator _mediator;
+       
 
 
-        public HomeController(IThingIDoService thingIDoService, ICustomerFeedbackService customerFeedbackService, ICustomerLogoService customerLogoService)
+        public HomeController( IMediator mediator)
         {
-            _thingIDoService = thingIDoService;
-            _customerFeedbackService = customerFeedbackService;
-            _customerLogoService = customerLogoService;
+           
+             _mediator = mediator;
+           
         }
         #endregion
         public async Task<IActionResult> Index(CancellationToken cancellationToken)
@@ -27,9 +30,9 @@ namespace Resume.Web.Controllers
 
             IndexPageViewModel model = new IndexPageViewModel()
             {
-                ThingIDoList = await _thingIDoService.GetAllThingIDoForIndex(cancellationToken),
-                CustomerFeedbakcList = await _customerFeedbackService.GetAllCustomerFeedbacksAsyncForIndex(cancellationToken),
-                CustomerLogoList = await _customerLogoService.GetCustomerLogosForIndexPage(cancellationToken)
+                ThingIDoList = await _mediator.Send(new GetAllThingIDoForIndexQuery()),
+                CustomerFeedbakcList = await _mediator.Send(new GetAllCustomerFeedbacksForIndexQuery()),
+                CustomerLogoList = await _mediator.Send(new GetCustomerLogosForIndexPageQuery())
             };
 
             return View(model);

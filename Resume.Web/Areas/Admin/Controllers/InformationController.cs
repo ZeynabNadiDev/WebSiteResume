@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Resume.Application.CQRS.Commands.Informations;
+using Resume.Application.CQRS.Queries.Informations;
 using Resume.Application.Eetensions;
 using Resume.Application.Generator;
-using Resume.Application.Services.Interfaces;
 using Resume.Application.StaticTools;
 using Resume.Domain.ViewModels.Information;
 using Resume.Web.Areas.Controllers;
@@ -16,24 +18,24 @@ namespace Resume.Web.Areas.Admin.Controllers
     {
 
         #region Constructor
-        private readonly IInformationService _informationService;
+        private readonly IMediator _mediator;
 
-        public InformationController(IInformationService informationService)
+        public InformationController(IMediator mediator)
         {
-            _informationService = informationService;
+            _mediator = mediator;
         }
         #endregion
 
 
         public async Task<IActionResult> LoadInformationFormModal(CancellationToken cancellationToken)
         {
-            CreateOrEditInformationViewModel result = await _informationService.FillCreateOrEditInformationViewModel(cancellationToken);
+            CreateOrEditInformationViewModel result = await _mediator.Send(new FillCreateOrEditInformationViewModelQuery(),cancellationToken);
             return View("_InformationFormModalPartial", result);
         }
 
         public async Task<IActionResult> SubmitInformationFormModal(CreateOrEditInformationViewModel information,CancellationToken cancellationToken)
         {
-            var result = await _informationService.CreateOrEditInformation(information,cancellationToken);
+            var result = await _mediator.Send(new CreateOrEditInformationCommand(information),cancellationToken);
 
             if (result) return new JsonResult(new { status = "Success" });
 

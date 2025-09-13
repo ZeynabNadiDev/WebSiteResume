@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Resume.Application.Services.Interfaces;
+﻿using MediatR;
+using Microsoft.AspNetCore.Mvc;
+using Resume.Application.CQRS.Commands.PortfolioCategories;
+using Resume.Application.CQRS.Queries.PortfolioCategories;
 using Resume.Domain.ViewModels.Portfolio;
 using Resume.Web.Areas.Controllers;
 using System;
@@ -14,27 +16,27 @@ namespace Resume.Web.Areas.Admin.Controllers
     {
 
         #region Constructor
-        private readonly IPortfolioService _portfolioService;
-        public PortfolioCategoryController(IPortfolioService portfolioService)
+        private readonly IMediator _mediator;
+        public PortfolioCategoryController(IMediator mediator)
         {
-            _portfolioService = portfolioService;
+            _mediator = mediator;
         }
         #endregion
 
         public async Task<IActionResult> Index(CancellationToken cancellationToken)
         {
-            return View(await _portfolioService.GetAllPortfolioCategories(cancellationToken));
+            return View(await _mediator.Send(new GetAllPortfolioCategoriesQuery(),cancellationToken));
         }
 
         public async Task<IActionResult> LoadPortfolioCategoryFormModal(long id,CancellationToken cancellationToken)
         {
-            CreateOrEditPortfolioCategoryViewModel result = await _portfolioService.FillCreateOrEditPortfolioCategoryViewModel(id,cancellationToken);
+            CreateOrEditPortfolioCategoryViewModel result = await _mediator.Send(new FillCreateOrEditPortfolioCategoryViewModelQuery(id),cancellationToken);
             return PartialView("_PortfolioCategorFormModalPartial", result);
         }
 
         public async Task<IActionResult> SubmitPortfolioCategoryFormModal(CreateOrEditPortfolioCategoryViewModel portfolioCategory,CancellationToken cancellationToken)
         {
-            var result = await _portfolioService.CreateOrEditPortfolioCategory(portfolioCategory, cancellationToken);
+            var result = await _mediator.Send(new CreateOrEditPortfolioCategoryCommand(portfolioCategory), cancellationToken);
 
             if (result) return new JsonResult(new { status = "Success" });
 
@@ -43,7 +45,7 @@ namespace Resume.Web.Areas.Admin.Controllers
 
         public async Task<IActionResult> DeletePortfolioCategory(long id,CancellationToken cancellationToken)
         {
-            var result = await _portfolioService.DeletePortfolioCategory(id, cancellationToken);
+            var result = await _mediator.Send(new DeletePortfolioCategoryCommand(id), cancellationToken);
 
             if (result) return new JsonResult(new { status = "Success" });
 

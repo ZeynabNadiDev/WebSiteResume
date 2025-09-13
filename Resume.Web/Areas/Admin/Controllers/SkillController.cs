@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Resume.Application.Services.Interfaces;
+﻿using MediatR;
+using Microsoft.AspNetCore.Mvc;
+using Resume.Application.CQRS.Commands.Skills;
+using Resume.Application.CQRS.Queries.Skills;
 using Resume.Domain.ViewModels.Skill;
 using Resume.Web.Areas.Controllers;
 using System;
@@ -14,42 +16,37 @@ namespace Resume.Web.Areas.Admin.Controllers
     {
 
         #region Constructor
-        private readonly ISkillService _skillService;
+        private readonly IMediator _mediator;
 
-        public SkillController(ISkillService skillService)
+        public SkillController(IMediator mediator)
         {
-            _skillService = skillService;
+            _mediator = mediator;
         }
         #endregion
 
 
         public async Task<IActionResult> Index(CancellationToken cancellationToken)
         {
-            return View(await _skillService.GetAllSkillsAsync(cancellationToken));
+            var skills = await _mediator.Send(new GetAllSkillsQuery(), cancellationToken);
+            return View(skills);
         }
 
         public async Task<IActionResult> LoadSkillFormModal(long id,CancellationToken cancellationToken)
         {
-            CreateOrEditSkillViewModel resutlt = await _skillService.FillCreateOrEditSkillViewModelAsync(id,cancellationToken);
-            return PartialView("_SkillFormModalPartial", resutlt);
+            var result = await _mediator.Send(new GetSkillByIdQuery(id), cancellationToken);
+            return PartialView("_SkillFormModalPartial", result);
         }
 
         public async Task<IActionResult> SubmitSkillFormModal(CreateOrEditSkillViewModel skill,CancellationToken cancellationToken)
         {
-            var result = await _skillService.CreateOrEditSkillAsync(skill,cancellationToken);
-
-            if (result) return new JsonResult(new { status = "Success" });
-
-            return new JsonResult(new { status = "Error" });
+            var result = await _mediator.Send(new CreateOrEditSkillCommand(skill), cancellationToken);
+            return new JsonResult(new { status = result ? "Success" : "Error" });
         }
 
         public async Task<IActionResult> DeleteSkill(long id,CancellationToken cancellationToken)
         {
-            var result = await _skillService.DeleteSkillAsync(id, cancellationToken);
-
-            if (result) return new JsonResult(new { status = "Success" });
-
-            return new JsonResult(new { status = "Error" });
+            var result = await _mediator.Send(new DeleteSkillCommand(id), cancellationToken);
+            return new JsonResult(new { status = result ? "Success" : "Error" });
 
         }
 

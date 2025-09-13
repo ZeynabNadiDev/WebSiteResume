@@ -1,50 +1,56 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Resume.Application.Services.Implementations;
-using Resume.Application.Services.Interfaces;
+using MediatR;
 using Resume.Domain.ViewModels.Reservation;
+using Resume.Application.CQRS.Queries.Reservations;
+using Resume.Application.CQRS.Commands.Reservations;
 using Resume.Web.Areas.Controllers;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Resume.Web.Areas.Admin.Controllers;
-
-public class ReservationController : AdminBaseController
+namespace Resume.Web.Areas.Admin.Controllers
 {
-    private readonly IReservationService _reservationService;
-    public ReservationController(IReservationService reservationService)
+    public class ReservationController : AdminBaseController
     {
-        _reservationService = reservationService;
-    }
+        private readonly IMediator _mediator;
 
-    [HttpGet]
-    public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
-        => View(await _reservationService.GetListOfReservations(cancellationToken));
+        public ReservationController(IMediator mediator)
+        {
+            _mediator = mediator;
+        }
 
-    public async Task<IActionResult> LoadReservationFormModal(long id , 
-        CancellationToken cancellationToken = default)
-    {
-        CreateOrUpdateReservationViewModel result = await _reservationService.FillCreateOrUpdateReservationViewModel(id , cancellationToken);
+        [HttpGet]
+        public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
+        {
+            var reservations = await _mediator.Send(new GetListOfReservationsQuery(), cancellationToken);
+            return View(reservations);
+        }
 
-        return PartialView("_ReservationFormModalPartial", result);
-    }
+        public async Task<IActionResult> LoadReservationFormModal(long id, CancellationToken cancellationToken = default)
+        {
+            var viewModel = await _mediator.Send(new FillCreateOrUpdateReservationViewModelQuery(id), cancellationToken);
+            return PartialView("_ReservationFormModalPartial", viewModel);
+        }
 
-    public async Task<IActionResult> SubmitReservationFormModal(CreateOrUpdateReservationViewModel Reservation , 
-        CancellationToken cancellationToken = default)
-    {
-        var result = await _reservationService.CreateOrEditReservationDate(Reservation , cancellationToken);
+        [HttpPost]
+        public async Task<IActionResult> SubmitReservationFormModal(CreateOrUpdateReservationViewModel reservation, CancellationToken cancellationToken = default)
+        {
+            var result = await _mediator.Send(new CreateOrEditReservationDateCommand(reservation), cancellationToken);
 
-        if (result) return new JsonResult(new { status = "Success" });
+            if (result)
+                return new JsonResult(new { status = "Success" });
 
-        return new JsonResult(new { status = "Error" });
-    }
+            return new JsonResult(new { status = "Error" });
+        }
 
-    public async Task<IActionResult> DeleteReservation(long id , 
-        CancellationToken cancellationToken = default)
-    {
-        var result = await _reservationService.DeleteReservationDate(id , cancellationToken);
+        [HttpPost]
+        public async Task<IActionResult> DeleteReservation(long id, CancellationToken cancellationToken = default)
+        {
+            var result = await _mediator.Send(new DeleteReservationDateCommand(id), cancellationToken);
 
-        if (result) return new JsonResult(new { status = "Success" });
+            if (result)
+                return new JsonResult(new { status = "Success" });
 
-        return new JsonResult(new { status = "Error" });
+            return new JsonResult(new { status = "Error" });
+        }
     }
 }

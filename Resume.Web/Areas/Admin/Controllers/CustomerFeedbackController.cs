@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Resume.Application.CQRS.Commands.CustomerFeedbacks;
+using Resume.Application.CQRS.Queries.CustomerFeedbacks;
 using Resume.Application.Eetensions;
 using Resume.Application.Generator;
-using Resume.Application.Services.Interfaces;
 using Resume.Application.StaticTools;
 using Resume.Domain.ViewModels.CustomerFeedback;
 using Resume.Web.Areas.Controllers;
@@ -19,29 +21,29 @@ namespace Resume.Web.Areas.Admin.Controllers
     {
 
         #region Constructor
-        private readonly ICustomerFeedbackService _customerFeedbackService;
+        private readonly IMediator _mediator;
 
-        public CustomerFeedbackController(ICustomerFeedbackService customerFeedbackService)
+        public CustomerFeedbackController(IMediator mediator)
         {
-            _customerFeedbackService = customerFeedbackService;
+            _mediator = mediator;
         }
         #endregion
 
 
         public async Task<IActionResult> Index(CancellationToken cancellationToken)
         {
-            return View(await _customerFeedbackService.GetAllCustomerFeedbacksAsyncForIndex(cancellationToken));
+            return View(await _mediator.Send(new GetAllCustomerFeedbacksForIndexQuery(),cancellationToken));
         }
 
         public async Task<IActionResult> LoadCustomrFeedbackFormModal(long id,CancellationToken cancellationToken)
         {
-            CreateOrEditCustomerFeedbackViewModel result = await _customerFeedbackService.FillCreateOrEditCustomerFeedbackViewModelAsync(id, cancellationToken);
+            CreateOrEditCustomerFeedbackViewModel result = await _mediator.Send(new FillCreateOrEditCustomerFeedbackViewModelQuery(id), cancellationToken);
             return PartialView("_CustomerFeedbackFormModalPartial", result);
         }
 
         public async Task<IActionResult> SubmitCustomerFeedbackFormModal(CreateOrEditCustomerFeedbackViewModel customerFeedback,CancellationToken cancellationToken)
         {
-            var result = await _customerFeedbackService.CreateOrEditCustomerFeedbackAsync(customerFeedback,cancellationToken);
+            var result = await _mediator.Send(new CreateOrEditCustomerFeedbackCommand(customerFeedback),cancellationToken);
 
             if (result) return new JsonResult(new { status = "Success" });
 
@@ -50,7 +52,7 @@ namespace Resume.Web.Areas.Admin.Controllers
 
         public async Task<IActionResult> DeleteCustomerFeedback(long id, CancellationToken cancellationToken)
         {
-            var result = await _customerFeedbackService.DeleteCustomerFeedbackAsync(id, cancellationToken);
+            var result = await _mediator.Send(new DeleteCustomerFeedbackCommand(id), cancellationToken);
 
             if (result) return new JsonResult(new { status = "Success" });
 

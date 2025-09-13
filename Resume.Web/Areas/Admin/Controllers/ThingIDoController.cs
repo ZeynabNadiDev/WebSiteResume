@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Resume.Application.Services.Interfaces;
+﻿using MediatR;
+using Microsoft.AspNetCore.Mvc;
+using Resume.Application.CQRS.Commands.ThingIDos;
+using Resume.Application.CQRS.Queries.ThingIDos;
 using Resume.Domain.ViewModels.ThingIDo;
 using Resume.Web.Areas.Controllers;
 using System.Threading;
@@ -10,11 +12,11 @@ namespace Resume.Web.Areas.Admin.Controllers
     public class ThingIDoController : AdminBaseController
     {
         #region Constructor
-        private readonly IThingIDoService _thingIDOService;
+        private readonly IMediator _mediator;
 
-        public ThingIDoController(IThingIDoService thingIDOService)
+        public ThingIDoController(IMediator mediator)
         {
-            _thingIDOService = thingIDOService;
+            _mediator = mediator;
         }
         #endregion
 
@@ -22,14 +24,14 @@ namespace Resume.Web.Areas.Admin.Controllers
         #region List
         public async Task<IActionResult> Index(CancellationToken cancellationToken)
         {
-            return View(await _thingIDOService.GetAllThingIDoForIndex(cancellationToken));
+            return View(await _mediator.Send(new GetAllThingIDoForIndexQuery(),cancellationToken));
         }
         #endregion
 
 
         public async Task<IActionResult> LoadThingIDoFormModal(long id,CancellationToken cancellationToken)
         {
-            CreateOrEditThingIDoViewModel result = await _thingIDOService.FillCreateOrEditThingIDoViewModel(id, cancellationToken);
+            CreateOrEditThingIDoViewModel result = await _mediator.Send(new FillCreateOrEditThingIDoViewModelQuery(id),cancellationToken);
 
             return PartialView("_ThingIDoFormModalPartial", result);
         }
@@ -37,7 +39,7 @@ namespace Resume.Web.Areas.Admin.Controllers
 
         public async Task<IActionResult> SubmitThingIDoFormModal(CreateOrEditThingIDoViewModel thingIDo,CancellationToken cancellationToken)
         {
-            var result = await _thingIDOService.CreateOrEditThingIDo(thingIDo, cancellationToken);
+            var result = await _mediator.Send(new CreateOrEditThingIDoCommand(thingIDo), cancellationToken);
 
             if (result) return new JsonResult(new { status = "Success" });
 
@@ -47,7 +49,7 @@ namespace Resume.Web.Areas.Admin.Controllers
 
         public async Task<IActionResult> DeleteThingIDO(long id,CancellationToken cancellationToken)
         {
-            var result = await _thingIDOService.DeleteThingIDo(id, cancellationToken);
+            var result = await _mediator.Send(new DeleteThingIDoCommand(id), cancellationToken);
 
             if (result) return new JsonResult(new { status = "Success" });
 

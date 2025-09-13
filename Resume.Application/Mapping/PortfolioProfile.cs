@@ -14,9 +14,9 @@ namespace Resume.Application.Mapping
         public PortfolioProfile()
         {
           CreateMap<Portfolio,PortfolioViewModel>().ReverseMap();
-          CreateMap<Portfolio,PortfolioCategoryViewModel>().ReverseMap();
+          CreateMap<PortfolioCategory, PortfolioCategoryViewModel>().ReverseMap();
           CreateMap<Portfolio,CreateOrEditPortfolioViewModel>().ReverseMap();
-          CreateMap<Portfolio,CreateOrEditPortfolioCategoryViewModel>().ReverseMap();
+          CreateMap<PortfolioCategory, CreateOrEditPortfolioCategoryViewModel>().ReverseMap();
           
         }
     }

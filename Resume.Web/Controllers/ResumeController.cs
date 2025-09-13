@@ -1,5 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Resume.Application.Services.Interfaces;
+﻿using MediatR;
+using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Mvc;
+using Resume.Application.CQRS.Queries.Educations;
+using Resume.Application.CQRS.Queries.Experiences;
+using Resume.Application.CQRS.Queries.Skills;
 using Resume.Domain.ViewModels.Page;
 using System;
 using System.Collections.Generic;
@@ -13,24 +17,26 @@ namespace Resume.Web.Controllers
     {
 
         #region Constructor
-        private readonly IEducationService _educationService;
-        private readonly IExperienceService _experienceService;
-        private readonly ISkillService _skillService;
-        public ResumeController(IEducationService educationService, IExperienceService experienceService, ISkillService skillService)
+        
+     
+        private readonly IMediator _mediator;
+        public ResumeController( IMediator mediator)
         {
-            _educationService = educationService;
-            _experienceService = experienceService;
-            _skillService = skillService;
+         
+            _mediator = mediator;
         }
         #endregion
 
         public async Task<IActionResult> Index(CancellationToken cancellationToken)
         {
+            var skills = await _mediator.Send(new GetAllSkillsQuery(), cancellationToken);
+            var educations = await _mediator.Send(new GetAllEducationsQuery(), cancellationToken);
+            var experiences=await _mediator.Send(new GetAllExperiencesQuery(), cancellationToken);
             ResumePageViewModel model = new ResumePageViewModel()
             {
-                Educations = await _educationService.GetAllEducations(cancellationToken),
-                Experiences = await _experienceService.GetAllExperiences(cancellationToken),
-                Skills = await _skillService.GetAllSkillsAsync(cancellationToken)
+                Educations = educations,
+                Experiences = experiences,
+                Skills = skills
             };
 
             return View(model);

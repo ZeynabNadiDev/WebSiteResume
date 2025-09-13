@@ -8,9 +8,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Resume.Application.CQRS.Queries.Reservations;
+using Resume.Application.Eetensions;
 using Resume.Application.Mapping;
-using Resume.Application.Services.Implementations;
-using Resume.Application.Services.Interfaces;
 using Resume.Domain.Repository;
 using Resume.Domain.UnitOfWorks.Interface;
 using Resume.Infra.Data.Context;
@@ -23,7 +23,6 @@ using System.Linq;
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
 using System.Threading.Tasks;
-using Resume.Application.Eetensions;
 
 namespace Resume.Web;
 
@@ -46,18 +45,14 @@ public class Program
         #region Registration 
 
         //Service Registration
-        
-        builder.Services.AddScoped<IThingIDoService, ThingIDoService>();
-        builder.Services.AddScoped<ICustomerFeedbackService, CustomerFeedbackService>();
-        builder.Services.AddScoped<ICustomerLogoService, CustomerLogoService>();
-        builder.Services.AddScoped<IEducationService, EducationService>();
-        builder.Services.AddScoped<IExperienceService, ExperienceService>();
-        builder.Services.AddScoped<ISkillService, SkillService>();
-        builder.Services.AddScoped<IPortfolioService, PortfolioService>();
-        builder.Services.AddScoped<ISocialMediaService, SocialMediaService>();
-        builder.Services.AddScoped<IInformationService, InformationService>();
-        builder.Services.AddScoped<IMessageService, MessageService>();
-        builder.Services.AddScoped<IReservationService, ReservationService>();
+
+        #region CQRS + MediatR Registration
+       
+        builder.Services.AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssembly(typeof(GetListOfReservationsQuery).Assembly);
+        });
+        #endregion
 
         //Repository Registration
         builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));

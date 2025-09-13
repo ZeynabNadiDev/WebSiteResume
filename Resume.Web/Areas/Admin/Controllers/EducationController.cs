@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Resume.Application.Services.Interfaces;
+﻿using MediatR;
+using Microsoft.AspNetCore.Mvc;
+using Resume.Application.CQRS.Commands.Educations;
+using Resume.Application.CQRS.Queries.Educations;
 using Resume.Domain.ViewModels.Education;
 using Resume.Web.Areas.Controllers;
 using System;
@@ -13,42 +15,36 @@ namespace Resume.Web.Areas.Admin.Controllers
     public class EducationController : AdminBaseController
     {
         #region Constructor
-        private readonly IEducationService _educationService;
+        private readonly IMediator _mediator;
 
-        public EducationController(IEducationService educationService)
+        public EducationController(IMediator mediator)
         {
-            _educationService = educationService;
+            _mediator = mediator;
         }
         #endregion
 
         public async Task<IActionResult> Index(CancellationToken cancellationToken)
         {
-            return View(await _educationService.GetAllEducations(cancellationToken));
+            return View(await _mediator.Send(new GetAllEducationsQuery(), cancellationToken));
         }
 
         public async Task<IActionResult> LoadEducationFormModal(long id, CancellationToken cancellationToken)
         {
-            CreateOrEditEducationViewModel result = await _educationService.FillCreateOrEditEducationViewModel(id, cancellationToken);
-
-            return PartialView("_EducationFormModalPartial", result);
+             var result = await _mediator.Send(new FillCreateOrEditEducationViewModelQuery(id), cancellationToken);
+    return PartialView("_EducationFormModalPartial", result);
         }
 
         public async Task<IActionResult> SubmitEducationFormModal(CreateOrEditEducationViewModel education,CancellationToken cancellationToken)
         {
-            var result = await _educationService.CreateOrEditEducation(education, cancellationToken);
+            var result = await _mediator.Send(new CreateOrEditEducationCommand(education), cancellationToken);
+            return new JsonResult(new { status = result ? "Success" : "Error" });
 
-            if (result) return new JsonResult(new { status = "Success" });
-
-            return new JsonResult(new { status = "Error" });
         }
 
         public async Task<IActionResult> DeleteEducation(long id,CancellationToken cancellationToken)
         {
-            var result = await _educationService.DeleteEducation(id, cancellationToken);
-
-            if (result) return new JsonResult(new { status = "Success" });
-
-            return new JsonResult(new { status = "Error" });
+            var result = await _mediator.Send(new DeleteEducationCommand(id), cancellationToken);
+            return new JsonResult(new { status = result ? "Success" : "Error" });
         }
 
     }
