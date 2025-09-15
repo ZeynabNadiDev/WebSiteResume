@@ -13,9 +13,11 @@ namespace Resume.Infra.Data.Services.Caching
     public class RedisCacheService : ICacheService
     {
         private readonly IDatabase _db;
+        private readonly IConnectionMultiplexer _connection;
 
         public RedisCacheService(IConnectionMultiplexer connection)
         {
+            _connection = connection;
             _db = connection.GetDatabase();
         }
         public async Task SetAsync<T>(string key, T value, TimeSpan? expiry = null)
@@ -37,6 +39,17 @@ namespace Resume.Infra.Data.Services.Caching
         public async Task RemoveAsync(string key)
         {
             await _db.KeyDeleteAsync(key);
+        }
+
+        public async Task RemoveByPatternAsync(string pattern)
+        {
+            var server = _connection.GetServer(_connection.GetEndPoints().First());
+            var keys = server.Keys(pattern: $"*{pattern}*").ToArray();
+
+            foreach (var key in keys)
+            {
+                await _db.KeyDeleteAsync(key);
+            }
         }
     }
 }
