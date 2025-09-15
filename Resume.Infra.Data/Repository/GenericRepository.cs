@@ -30,15 +30,15 @@ namespace Resume.Infra.Data.Repository
         {
             return await _dbSet.ToListAsync(cancellationToken);
         }
-        public async Task AddAsync(TEntity entity, CancellationToken cancellationToken)
+        public virtual async Task AddAsync(TEntity entity, CancellationToken cancellationToken)
         {
             await _dbSet.AddAsync(entity, cancellationToken);
         }
-        public void Update(TEntity entity)
+        public virtual void Update(TEntity entity)
         {
             _dbSet.Update(entity);
         }
-        public void Delete(TEntity entity)
+        public virtual void Delete(TEntity entity)
         {
             _dbSet.Remove(entity);
         }

@@ -1,8 +1,9 @@
-using AutoMapper.Internal;
+﻿using AutoMapper.Internal;
 using GoogleReCaptcha.V3;
 using GoogleReCaptcha.V3.Interface;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,19 +11,19 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Resume.Application.CQRS.Queries.Reservations;
 using Resume.Application.Eetensions;
+using Resume.Application.Redis.Caching;
 using Resume.Application.Mapping;
+using Resume.Application.Redis.Caching.Interfaces;
 using Resume.Domain.Repository;
 using Resume.Domain.UnitOfWorks.Interface;
 using Resume.Infra.Data.Context;
 using Resume.Infra.Data.Repository;
+using Resume.Infra.Data.Services.Caching;
 using Resume.Infra.Data.UnitOfWork;
+using StackExchange.Redis;
 using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
-using System.Threading.Tasks;
 
 namespace Resume.Web;
 
@@ -33,28 +34,33 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
         builder.Services.AddControllersWithViews();
 
-        #region Add DbContext
+        #region Redis
+        builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+        {
+            var configuration = sp.GetRequiredService<IConfiguration>();
+            var connectionString = configuration.GetConnectionString("Redis");
+            return ConnectionMultiplexer.Connect(connectionString);
+        });
 
+        builder.Services.AddScoped<ICacheService, RedisCacheService>();
+        #endregion
+
+        #region Add DbContext
         builder.Services.AddDbContext<AppDbContext>(options =>
         {
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
         });
-
         #endregion
 
         #region Registration 
 
-        //Service Registration
-
-        #region CQRS + MediatR Registration
-       
+        // CQRS + MediatR Registration
         builder.Services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssembly(typeof(GetListOfReservationsQuery).Assembly);
         });
-        #endregion
 
-        //Repository Registration
+        // Repository Registration
         builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
         builder.Services.AddScoped<ISkillRepository, SkillRepository>();
         builder.Services.AddScoped<ICustomerFeedbackRepository, CustomerFeedbackRepository>();
@@ -69,12 +75,11 @@ public class Program
         builder.Services.AddScoped<IThingIDoRepository, ThingIDoRepository>();
         builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 
-        //UnitOfWork
+        // UnitOfWork
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        #region Google Recaptcha
+        // Google Recaptcha
         builder.Services.AddHttpClient<ICaptchaValidator, GoogleReCaptchaValidator>();
-        #endregion
 
         #endregion
 
@@ -83,12 +88,20 @@ public class Program
         #endregion
 
         #region Mapping
-
         builder.Services.CondigureApplicationServices();
-
         #endregion
 
         var app = builder.Build();
+
+        // Redis تست
+        app.MapGet("/redis-test", async (IServiceProvider sp) =>
+        {
+            var mux = sp.GetRequiredService<IConnectionMultiplexer>();
+            var db = mux.GetDatabase();
+            await db.StringSetAsync("test:key", "hello from .NET");
+            var value = await db.StringGetAsync("test:key");
+            return Results.Ok(value.ToString());
+        });
 
         if (!app.Environment.IsDevelopment())
         {
@@ -100,7 +113,6 @@ public class Program
         app.UseStaticFiles();
 
         app.UseRouting();
-
         app.UseAuthorization();
 
         app.MapControllerRoute(
