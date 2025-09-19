@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Resume.Application.Convertors;
+using Resume.Application.Redis.Caching.Interfaces;
 using Resume.Domain.Repository;
 using Resume.Domain.UnitOfWorks.Interface;
 using System.Threading;
@@ -14,11 +15,14 @@ namespace Resume.Application.CQRS.Commands.Reservations
     {
         private readonly IReservationRepository _reservationRepository;
         private readonly IUnitOfWork _uow;
+        private readonly ICacheService _cacheService;
 
-        public EditReservationDateCommandHandler(IReservationRepository reservationRepository, IUnitOfWork uow)
+        public EditReservationDateCommandHandler(IReservationRepository reservationRepository,
+            IUnitOfWork uow,ICacheService cacheService)
         {
             _reservationRepository = reservationRepository;
             _uow = uow;
+            _cacheService = cacheService;
         }
 
         public async Task<bool> Handle(EditReservationDateCommand request, CancellationToken cancellationToken)
@@ -30,6 +34,10 @@ namespace Resume.Application.CQRS.Commands.Reservations
             _reservationRepository.Update(originalRecord);
 
             await _uow.SaveChangesAsync(cancellationToken);
+
+            await _cacheService.RemoveAsync($"reservation:{request.Id}:entity");
+            await _cacheService.RemoveAsync("reservations:index:all");
+
             return true;
         }
     }

@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using MediatR;
+using Resume.Application.Redis.Caching.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Repository;
 using Resume.Domain.UnitOfWorks.Interface;
@@ -19,19 +20,26 @@ namespace Resume.Application.CQRS.Commands.Messages
         private readonly IMessageRepository _repository;
         private readonly IMapper _mapper;
         private readonly IUnitOfWork _uow;
+        private readonly ICacheService _cacheService;
 
-        public CreateMessageCommandHandler(IMessageRepository repository, IMapper mapper, IUnitOfWork uow)
+        public CreateMessageCommandHandler(IMessageRepository repository, IMapper mapper,
+            IUnitOfWork uow,ICacheService cacheService)
         {
             _repository = repository;
             _mapper = mapper;
             _uow = uow;
+            _cacheService = cacheService;
         }
         public async Task<bool> Handle(CreateMessageCommand request, CancellationToken cancellationToken)
         {
             var newMessage = _mapper.Map<Message>(request.message);
             await _repository.AddAsync(newMessage, cancellationToken);
             await _uow.SaveChangesAsync(cancellationToken);
+
+            await _cacheService.RemoveAsync("messages:index:all");
+
             return true;
+            
         }
     }
 

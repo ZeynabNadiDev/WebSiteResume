@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using MediatR;
+using Resume.Application.Redis.Caching.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Repository;
 using Resume.Domain.UnitOfWorks.Interface;
@@ -19,12 +20,14 @@ namespace Resume.Application.CQRS.Commands.Skills
         private readonly ISkillRepository _repo;
         private readonly IUnitOfWork _uow;
         private readonly IMapper _mapper;
+        private readonly ICacheService _cacheService;
 
-        public CreateOrEditSkillHandler(ISkillRepository repo, IMapper mapper, IUnitOfWork uow)
+        public CreateOrEditSkillHandler(ISkillRepository repo, IMapper mapper, IUnitOfWork uow,ICacheService cacheService)
         {
             _repo = repo;
             _mapper = mapper;
             _uow = uow;
+            _cacheService = cacheService;
         }
 
         public async Task<bool> Handle(CreateOrEditSkillCommand request, CancellationToken cancellationToken)
@@ -33,6 +36,11 @@ namespace Resume.Application.CQRS.Commands.Skills
             {
                 var newSkill = _mapper.Map<Skill>(request.Skill);
                 await _repo.AddAsync(newSkill, cancellationToken);
+                await _uow.SaveChangesAsync(cancellationToken);
+
+                await _cacheService.RemoveAsync("skills:index:all");
+
+                return true;
             }
             else // Update
             {
@@ -42,10 +50,16 @@ namespace Resume.Application.CQRS.Commands.Skills
 
                 _mapper.Map(request.Skill, existingSkill);
                 _repo.Update(existingSkill);
+
+                await _uow.SaveChangesAsync(cancellationToken);
+
+                await _cacheService.RemoveAsync($"skill:{request.Skill.Id}:entity");
+                await _cacheService.RemoveAsync("skills:index:all");
+
+                return true;
+
             }
 
-            await _uow.SaveChangesAsync(cancellationToken);
-            return true;
         }
     }
 

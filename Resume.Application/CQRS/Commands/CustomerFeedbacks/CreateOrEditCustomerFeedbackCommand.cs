@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using MediatR;
+using Resume.Application.Redis.Caching.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Repository;
 using Resume.Domain.UnitOfWorks.Interface;
@@ -16,15 +17,18 @@ namespace Resume.Application.CQRS.Commands.CustomerFeedbacks
         private readonly ICustomerFeedbackRepository _repository;
         private readonly IUnitOfWork _uow;
         private readonly IMapper _mapper;
+        private readonly ICacheService _cacheService;
 
         public CreateOrEditCustomerFeedbackCommandHandler(
             ICustomerFeedbackRepository repository,
             IUnitOfWork uow,
-            IMapper mapper)
+            IMapper mapper,
+            ICacheService cacheService)
         {
             _repository = repository;
             _uow = uow;
             _mapper = mapper;
+            _cacheService = cacheService;
         }
 
         public async Task<bool> Handle(CreateOrEditCustomerFeedbackCommand request, CancellationToken cancellationToken)
@@ -36,6 +40,7 @@ namespace Resume.Application.CQRS.Commands.CustomerFeedbacks
                 var newCustomerFeedback = _mapper.Map<CustomerFeedback>(model);
                 await _repository.AddAsync(newCustomerFeedback, cancellationToken);
                 await _uow.SaveChangesAsync(cancellationToken);
+                await _cacheService.RemoveAsync("customerfeedbacks:index:all");
                 return true;
             }
 
@@ -47,6 +52,9 @@ namespace Resume.Application.CQRS.Commands.CustomerFeedbacks
             _mapper.Map(model, currentCustomerFeedback);
             _repository.Update(currentCustomerFeedback);
             await _uow.SaveChangesAsync(cancellationToken);
+
+            await _cacheService.RemoveAsync($"customerfeedback:{model.Id}:entity");
+            await _cacheService.RemoveAsync("customerfeedbacks:index:all");
 
             return true;
         }

@@ -1,6 +1,8 @@
 ﻿using MediatR;
-using Resume.Domain.Repository;
+using Resume.Application.Redis.Caching.Interfaces;
 using Resume.Domain.Entity;
+using Resume.Domain.Repository;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,15 +14,28 @@ namespace Resume.Application.CQRS.Queries.Portfolios
         : IRequestHandler<GetPortfolioByIdQuery, Portfolio?>
     {
         private readonly IPortfolioRepository _portfolioRepository;
+        private readonly ICacheService _cacheService;
 
-        public GetPortfolioByIdQueryHandler(IPortfolioRepository portfolioRepository)
+        public GetPortfolioByIdQueryHandler(IPortfolioRepository portfolioRepository,ICacheService cacheService)
         {
             _portfolioRepository = portfolioRepository;
+            _cacheService = cacheService;  
         }
 
-        public Task<Portfolio?> Handle(GetPortfolioByIdQuery request, CancellationToken cancellationToken)
+        public async Task<Portfolio?> Handle(GetPortfolioByIdQuery request, CancellationToken cancellationToken)
         {
-            return _portfolioRepository.GetByIdAsync(request.Id, cancellationToken);
+            if (request.Id <= 0)
+                return null;
+
+            var cacheKey = $"portfolio:{request.Id}:entity";
+            var cachedData = await _cacheService.GetAsync<Portfolio>(cacheKey);
+            if (cachedData != null)
+                return cachedData;
+            var portfolio = await _portfolioRepository.GetByIdAsync(request.Id, cancellationToken);
+            if (portfolio != null)
+                await _cacheService.SetAsync(cacheKey, portfolio, TimeSpan.FromMinutes(10));
+
+             return portfolio;
         }
     }
 

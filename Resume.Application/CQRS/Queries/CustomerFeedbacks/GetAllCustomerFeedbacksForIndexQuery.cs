@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using MediatR;
+using Resume.Application.Redis.Caching.Interfaces;
 using Resume.Domain.Repository;
 using Resume.Domain.ViewModels.CustomerFeedback;
 using System;
@@ -16,16 +17,34 @@ namespace Resume.Application.CQRS.Queries.CustomerFeedbacks
     {
         private readonly IMapper _mapper;
         private readonly ICustomerFeedbackRepository _repository;
+        private readonly ICacheService _cacheService;
 
-        public GetAllCustomerFeedbacksForIndexQueryHandler(IMapper mapper, ICustomerFeedbackRepository repository)
+        public GetAllCustomerFeedbacksForIndexQueryHandler(IMapper mapper,
+            ICustomerFeedbackRepository repository,ICacheService cacheService)
         {
             _repository = repository;
             _mapper = mapper;
+            _cacheService = cacheService;   
         }
-        public async Task<List<CustomerFeedbackViewModel>> Handle(GetAllCustomerFeedbacksForIndexQuery request, CancellationToken cancellationToken)
+        public async Task<List<CustomerFeedbackViewModel>> Handle
+            (GetAllCustomerFeedbacksForIndexQuery request, CancellationToken cancellationToken)
         {
+            // get from redis (cach)
+            var cacheKey = "customerfeedbacks:index:all";
+            var cachedData = await _cacheService.GetAsync<List<CustomerFeedbackViewModel>>(cacheKey);
+            if (cachedData != null)
+                return cachedData;
+
+            // get from database
             var customerFeedbacks = await _repository.GetAllOrderedAsync(cancellationToken);
-            return _mapper.Map<List<CustomerFeedbackViewModel>>(customerFeedbacks);
+
+            var mapped= _mapper.Map<List<CustomerFeedbackViewModel>>(customerFeedbacks);
+
+            //save in redis(cach) with 10 minutes 
+            await _cacheService.SetAsync(cacheKey, mapped, TimeSpan.FromMinutes(10));
+
+            return mapped;
+
         }
 
     }

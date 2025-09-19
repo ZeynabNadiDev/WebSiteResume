@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using MediatR;
+using Resume.Application.Redis.Caching.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Repository;
 using Resume.Domain.UnitOfWorks.Interface;
@@ -19,12 +20,15 @@ namespace Resume.Application.CQRS.Commands.Educations
         private readonly IEducationRepository _repo;
         private readonly IMapper _mapper;
         private readonly IUnitOfWork _uow;
+        private readonly ICacheService _cacheService;
 
-        public CreateOrEditEducationHandler(IEducationRepository repo, IMapper mapper, IUnitOfWork uow)
+        public CreateOrEditEducationHandler(IEducationRepository repo, IMapper mapper, 
+            IUnitOfWork uow, ICacheService cacheService)
         {
             _repo = repo;
             _mapper = mapper;
             _uow = uow;
+            _cacheService = cacheService;
         }
 
         public async Task<bool> Handle(CreateOrEditEducationCommand request, CancellationToken cancellationToken)
@@ -33,6 +37,9 @@ namespace Resume.Application.CQRS.Commands.Educations
             {
                 var newEducation = _mapper.Map<Education>(request.Education);
                 await _repo.AddAsync(newEducation, cancellationToken);
+                await _uow.SaveChangesAsync(cancellationToken);
+                await _cacheService.RemoveAsync("educations:index:all");
+                return true;
             }
             else
             {
@@ -40,10 +47,16 @@ namespace Resume.Application.CQRS.Commands.Educations
                 if (existingEducation == null) return false;
                 _mapper.Map(request.Education, existingEducation);
                 _repo.Update(existingEducation);
+
+                await _uow.SaveChangesAsync(cancellationToken);
+
+                await _cacheService.RemoveAsync($"education:{request.Education.Id}:entity");
+                await _cacheService.RemoveAsync("educations:index:all");
+
+                return true;
             }
 
-            await _uow.SaveChangesAsync(cancellationToken);
-            return true;
+          
         }
     }
 
