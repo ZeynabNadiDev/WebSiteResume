@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.Extensions.Logging;
 using Resume.Application.Redis.Caching.Interfaces;
 using Resume.Domain.Repository;
 using Resume.Domain.UnitOfWorks.Interface;
@@ -17,28 +18,49 @@ namespace Resume.Application.CQRS.Commands.CustomerFeedbacks
         private readonly ICustomerFeedbackRepository _repository;
         private readonly IUnitOfWork _uow;
         private readonly ICacheService _cacheService;
+        private readonly ILogger<DeleteCustomerFeedbackCommandHandler> _logger;
+
         public DeleteCustomerFeedbackCommandHandler(ICustomerFeedbackRepository repository, 
-            IUnitOfWork uow,ICacheService cacheService)
+            IUnitOfWork uow,ICacheService cacheService,
+             ILogger<DeleteCustomerFeedbackCommandHandler> logger)
         {
             _repository = repository;
             _uow = uow;
             _cacheService = cacheService;
+            _logger = logger;
         }
 
         public async Task<bool> Handle(DeleteCustomerFeedbackCommand request, CancellationToken cancellationToken)
         {
-            var customerFeedback = await _repository.GetByIdAsync(request.Id, cancellationToken);
-            if (customerFeedback == null) return false;
+            _logger.LogInformation("Handling DeleteCustomerFeedbackCommand, Id: {Id}", request.Id);
 
-            _repository.Delete(customerFeedback);
+            try
+            {
+                var customerFeedback = await _repository.GetByIdAsync(request.Id, cancellationToken);
+            if (customerFeedback == null)
+                {
+                    _logger.LogWarning("CustomerFeedback not found for Id: {Id}", request.Id);
+                    return false;
+                }
+
+                _repository.Delete(customerFeedback);
             await _uow.SaveChangesAsync(cancellationToken);
 
-            // Cache Invalidation
+            _logger.LogInformation("Deleted CustomerFeedback successfully, Id: {Id}", request.Id);
+
+                // Cache Invalidation
             await _cacheService.RemoveAsync($"customerfeedback:{request.Id}:entity");
             await _cacheService.RemoveAsync("customerfeedbacks:index:all");
 
-            return true;
-            
+                _logger.LogInformation("Cache invalidated for CustomerFeedback Id: {Id}", request.Id);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while deleting CustomerFeedback, Id: {Id}", request.Id);
+                throw;
+            }
 
         }
     }

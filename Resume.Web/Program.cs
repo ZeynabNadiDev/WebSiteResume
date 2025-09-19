@@ -1,5 +1,4 @@
-﻿using AutoMapper.Internal;
-using GoogleReCaptcha.V3;
+﻿using GoogleReCaptcha.V3;
 using GoogleReCaptcha.V3.Interface;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -8,11 +7,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Resume.Application.CQRS.Queries.Reservations;
 using Resume.Application.Eetensions;
 using Resume.Application.Redis.Caching;
-using Resume.Application.Mapping;
 using Resume.Application.Redis.Caching.Interfaces;
 using Resume.Domain.Repository;
 using Resume.Domain.UnitOfWorks.Interface;
@@ -20,6 +17,8 @@ using Resume.Infra.Data.Context;
 using Resume.Infra.Data.Repository;
 using Resume.Infra.Data.Services.Caching;
 using Resume.Infra.Data.UnitOfWork;
+using Serilog;
+using Serilog.Formatting.Compact;
 using StackExchange.Redis;
 using System;
 using System.Text.Encodings.Web;
@@ -31,15 +30,41 @@ public class Program
 {
     public static void Main(string[] args)
     {
+        #region Serilog
+        // --- 1) Configure Serilog logger before creating builder ---
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+            .MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
+            .Enrich.FromLogContext()
+            .Enrich.WithEnvironmentName()
+            .Enrich.WithThreadId()
+            .Enrich.WithProcessId()
+            .WriteTo.Console(new RenderedCompactJsonFormatter()) // JSON output in Console
+            .WriteTo.File(
+                new RenderedCompactJsonFormatter(),
+                "logs/log-.json",
+                rollingInterval: RollingInterval.Day) // Daily rolling log files
+            .WriteTo.Seq("http://localhost:5341") // Seq server for viewing logs
+            .CreateLogger();
+        #endregion
+
         var builder = WebApplication.CreateBuilder(args);
+
+        #region Attach Serilog to Host
+        builder.Host.UseSerilog();
+        #endregion
+
+        #region MVC Setup
         builder.Services.AddControllersWithViews();
+        #endregion
 
         #region Redis
         builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
         {
             var configuration = sp.GetRequiredService<IConfiguration>();
-            var connectionString = configuration.GetConnectionString("Redis");
-            return ConnectionMultiplexer.Connect(connectionString);
+            var redisConnectionString = configuration.GetConnectionString("Redis");
+            return ConnectionMultiplexer.Connect(redisConnectionString);
         });
 
         builder.Services.AddScoped<ICacheService, RedisCacheService>();
@@ -52,15 +77,14 @@ public class Program
         });
         #endregion
 
-        #region Registration 
-
-        // CQRS + MediatR Registration
+        #region Registration (CQRS, Repositories, UnitOfWork, Google ReCaptcha)
+        // MediatR for CQRS
         builder.Services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssembly(typeof(GetListOfReservationsQuery).Assembly);
         });
 
-        // Repository Registration
+        // Repositories
         builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
         builder.Services.AddScoped<ISkillRepository, SkillRepository>();
         builder.Services.AddScoped<ICustomerFeedbackRepository, CustomerFeedbackRepository>();
@@ -80,20 +104,20 @@ public class Program
 
         // Google Recaptcha
         builder.Services.AddHttpClient<ICaptchaValidator, GoogleReCaptchaValidator>();
-
         #endregion
 
-        #region Encoder
-        builder.Services.AddSingleton<HtmlEncoder>(HtmlEncoder.Create(allowedRanges: new[] { UnicodeRanges.All }));
+        #region Html Encoder Setup
+        builder.Services.AddSingleton<HtmlEncoder>(
+            HtmlEncoder.Create(allowedRanges: new[] { UnicodeRanges.All }));
         #endregion
 
-        #region Mapping
+        #region Application Services Configuration
         builder.Services.CondigureApplicationServices();
         #endregion
 
         var app = builder.Build();
 
-        // Redis تست
+        #region Redis Test Endpoint
         app.MapGet("/redis-test", async (IServiceProvider sp) =>
         {
             var mux = sp.GetRequiredService<IConnectionMultiplexer>();
@@ -102,19 +126,24 @@ public class Program
             var value = await db.StringGetAsync("test:key");
             return Results.Ok(value.ToString());
         });
+        #endregion
 
+        #region Environment-based Middleware
         if (!app.Environment.IsDevelopment())
         {
             app.UseExceptionHandler("/Home/Error");
             app.UseHsts();
         }
+        #endregion
 
+        #region Middleware Pipeline
         app.UseHttpsRedirection();
         app.UseStaticFiles();
-
         app.UseRouting();
         app.UseAuthorization();
+        #endregion
 
+        #region Routing Setup
         app.MapControllerRoute(
             name: "area",
             pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
@@ -122,6 +151,11 @@ public class Program
         app.MapControllerRoute(
             name: "default",
             pattern: "{controller=Home}/{action=Index}/{id?}");
+        #endregion
+
+        #region Log Application Startup
+        Log.Information("Application starting up");
+        #endregion
 
         app.Run();
     }
