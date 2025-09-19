@@ -57,4 +57,9 @@ namespace Resume.Application.CQRS.Commands.ThingIDos
             }
             catch (Exception ex)
             {
-                _logger.Log
+                _logger.LogError(ex, "Error occurred while deleting ThingIDo, Id: {Id}", request.Id);
+                throw;
+            }
+        }
+    }
+}

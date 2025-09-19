@@ -1,4 +1,5 @@
-﻿using GoogleReCaptcha.V3;
+﻿using FluentValidation;
+using GoogleReCaptcha.V3;
 using GoogleReCaptcha.V3.Interface;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -55,10 +56,9 @@ public class Program
         builder.Host.UseSerilog();
         #endregion
 
-        #region MVC Setup
+        
         builder.Services.AddControllersWithViews();
-        #endregion
-
+    
         #region Redis
         builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
         {
@@ -77,12 +77,16 @@ public class Program
         });
         #endregion
 
-        #region Registration (CQRS, Repositories, UnitOfWork, Google ReCaptcha)
+        #region Registration (CQRS, Repositories, UnitOfWork, Google ReCaptcha,FluentValidation )
         // MediatR for CQRS
         builder.Services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssembly(typeof(GetListOfReservationsQuery).Assembly);
         });
+
+        //FluentValidation 
+        builder.Services.AddValidatorsFromAssembly(typeof(CreateOrEditReservationDateCommandValidator).Assembly);
+
 
         // Repositories
         builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
@@ -106,15 +110,12 @@ public class Program
         builder.Services.AddHttpClient<ICaptchaValidator, GoogleReCaptchaValidator>();
         #endregion
 
-        #region Html Encoder Setup
+        
         builder.Services.AddSingleton<HtmlEncoder>(
             HtmlEncoder.Create(allowedRanges: new[] { UnicodeRanges.All }));
-        #endregion
-
-        #region Application Services Configuration
+ 
         builder.Services.CondigureApplicationServices();
-        #endregion
-
+     
         var app = builder.Build();
 
         #region Redis Test Endpoint
@@ -128,22 +129,19 @@ public class Program
         });
         #endregion
 
-        #region Environment-based Middleware
+        
         if (!app.Environment.IsDevelopment())
         {
             app.UseExceptionHandler("/Home/Error");
             app.UseHsts();
         }
-        #endregion
 
-        #region Middleware Pipeline
         app.UseHttpsRedirection();
         app.UseStaticFiles();
         app.UseRouting();
         app.UseAuthorization();
-        #endregion
+       
 
-        #region Routing Setup
         app.MapControllerRoute(
             name: "area",
             pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
@@ -151,11 +149,10 @@ public class Program
         app.MapControllerRoute(
             name: "default",
             pattern: "{controller=Home}/{action=Index}/{id?}");
-        #endregion
+    
 
-        #region Log Application Startup
         Log.Information("Application starting up");
-        #endregion
+    
 
         app.Run();
     }
