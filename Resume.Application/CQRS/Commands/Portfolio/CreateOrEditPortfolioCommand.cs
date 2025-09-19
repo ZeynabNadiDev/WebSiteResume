@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using MediatR;
+using Resume.Application.Redis.Caching.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Repository;
 using Resume.Domain.UnitOfWorks.Interface;
@@ -17,12 +18,15 @@ namespace Resume.Application.CQRS.Commands.Portfolios
         private readonly IPortfolioRepository _portfolioRepository;
         private readonly IMapper _mapper;
         private readonly IUnitOfWork _uow;
+        private readonly ICacheService _cacheService;
 
-        public CreateOrEditPortfolioCommandHandler(IPortfolioRepository portfolioRepository, IMapper mapper, IUnitOfWork uow)
+        public CreateOrEditPortfolioCommandHandler(IPortfolioRepository portfolioRepository, IMapper mapper, 
+            IUnitOfWork uow,ICacheService cacheService)
         {
             _portfolioRepository = portfolioRepository;
             _mapper = mapper;
             _uow = uow;
+            _cacheService = cacheService;
         }
 
         public async Task<bool> Handle(CreateOrEditPortfolioCommand request, CancellationToken cancellationToken)
@@ -32,6 +36,8 @@ namespace Resume.Application.CQRS.Commands.Portfolios
                 var newPortfolio = _mapper.Map<Portfolio>(request.PortfolioVm);
                 await _portfolioRepository.AddAsync(newPortfolio, cancellationToken);
                 await _uow.SaveChangesAsync(cancellationToken);
+
+                await _cacheService.RemoveAsync("portfolios:index:all");
                 return true;
             }
 
@@ -41,6 +47,10 @@ namespace Resume.Application.CQRS.Commands.Portfolios
             _mapper.Map(request.PortfolioVm, currentPortfolio);
             _portfolioRepository.Update(currentPortfolio);
             await _uow.SaveChangesAsync(cancellationToken);
+
+            await _cacheService.RemoveAsync($"portfolio:{request.PortfolioVm.Id}:entity");
+            await _cacheService.RemoveAsync("portfolios:index:all");
+
             return true;
         }
     }

@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using MediatR;
+using Resume.Application.Redis.Caching.Interfaces;
 using Resume.Domain.Entity;
 using Resume.Domain.Repository;
 using Resume.Domain.ViewModels.Education;
@@ -18,11 +19,14 @@ namespace Resume.Application.CQRS.Queries.Educations
     {
         private readonly IEducationRepository _repo;
         private readonly IMapper _mapper;
+        private readonly ICacheService _cacheService;
 
-        public FillCreateOrEditEducationViewModelHandler(IEducationRepository repo, IMapper mapper)
+        public FillCreateOrEditEducationViewModelHandler(IEducationRepository repo, 
+            IMapper mapper,ICacheService cacheService)
         {
             _repo = repo;
             _mapper = mapper;
+            _cacheService = cacheService;
         }
 
         public async Task<CreateOrEditEducationViewModel> Handle(FillCreateOrEditEducationViewModelQuery request, CancellationToken cancellationToken)
@@ -30,12 +34,21 @@ namespace Resume.Application.CQRS.Queries.Educations
             if (request.Id == 0)
                 return new CreateOrEditEducationViewModel() { Id = 0 };
 
-            Education education = await _repo.GetByIdAsync(request.Id, cancellationToken);
+            var cacheKey = $"education:{request.Id}";
+
+            var cachData = await _cacheService.GetAsync<CreateOrEditEducationViewModel>(cacheKey);
+            if (cachData != null) return cachData;
+
+            var education = await _repo.GetByIdAsync(request.Id, cancellationToken);
 
             if (education == null)
                 return new CreateOrEditEducationViewModel() { Id = 0 };
 
-            return _mapper.Map<CreateOrEditEducationViewModel>(education);
+            var mapped = _mapper.Map<CreateOrEditEducationViewModel>(education);
+
+            await _cacheService.SetAsync(cacheKey, mapped, TimeSpan.FromMinutes(10));
+
+            return mapped;
         }
     }
 }

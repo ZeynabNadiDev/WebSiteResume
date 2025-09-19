@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using MediatR;
+using Resume.Application.Redis.Caching.Interfaces;
 using Resume.Domain.Repository;
 using Resume.Domain.ViewModels.Portfolio;
 using System;
@@ -17,16 +18,29 @@ namespace Resume.Application.CQRS.Queries.Portfolios
     {
         private readonly IPortfolioRepository _repository;
         private readonly IMapper _mapper;
+        private readonly ICacheService _cacheService;
 
-        public GetAllPortfoliosQueryHandler(IPortfolioRepository repository, IMapper mapper)
+        public GetAllPortfoliosQueryHandler(IPortfolioRepository repository, 
+            IMapper mapper,ICacheService cacheService)
         {
             _repository = repository;
             _mapper = mapper;
+            _cacheService = cacheService;
         }
-        public async Task<List<PortfolioViewModel>> Handle(GetAllPortfoliosQuery request,CancellationToken cancellationToken)
+        public async Task<List<PortfolioViewModel>> Handle
+            (GetAllPortfoliosQuery request,CancellationToken cancellationToken)
         {
-            var portfolios=await _repository.GetAllOrderedAsync(cancellationToken);
-            return _mapper.Map<List<PortfolioViewModel>>(portfolios);
+            const string cacheKey = "portfolios:index:all";
+            var cachedData = await _cacheService.GetAsync<List<PortfolioViewModel>>(cacheKey);
+            if (cachedData != null)
+                return cachedData;
+
+            var portfolios =await _repository.GetAllOrderedAsync(cancellationToken);
+            var mapped= _mapper.Map<List<PortfolioViewModel>>(portfolios);
+
+            await _cacheService.SetAsync(cacheKey, mapped, TimeSpan.FromMinutes(10));
+
+            return mapped;
         }
 
     }

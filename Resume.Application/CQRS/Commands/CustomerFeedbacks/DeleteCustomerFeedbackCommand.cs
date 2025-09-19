@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Resume.Application.Redis.Caching.Interfaces;
 using Resume.Domain.Repository;
 using Resume.Domain.UnitOfWorks.Interface;
 using System;
@@ -15,11 +16,13 @@ namespace Resume.Application.CQRS.Commands.CustomerFeedbacks
     {
         private readonly ICustomerFeedbackRepository _repository;
         private readonly IUnitOfWork _uow;
-
-        public DeleteCustomerFeedbackCommandHandler(ICustomerFeedbackRepository repository, IUnitOfWork uow)
+        private readonly ICacheService _cacheService;
+        public DeleteCustomerFeedbackCommandHandler(ICustomerFeedbackRepository repository, 
+            IUnitOfWork uow,ICacheService cacheService)
         {
             _repository = repository;
             _uow = uow;
+            _cacheService = cacheService;
         }
 
         public async Task<bool> Handle(DeleteCustomerFeedbackCommand request, CancellationToken cancellationToken)
@@ -30,7 +33,12 @@ namespace Resume.Application.CQRS.Commands.CustomerFeedbacks
             _repository.Delete(customerFeedback);
             await _uow.SaveChangesAsync(cancellationToken);
 
+            // Cache Invalidation
+            await _cacheService.RemoveAsync($"customerfeedback:{request.Id}:entity");
+            await _cacheService.RemoveAsync("customerfeedbacks:index:all");
+
             return true;
+            
 
         }
     }

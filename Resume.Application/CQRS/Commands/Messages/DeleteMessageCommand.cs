@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Resume.Application.Redis.Caching.Interfaces;
 using Resume.Domain.Repository;
 using Resume.Domain.UnitOfWorks.Interface;
 using System;
@@ -15,11 +16,13 @@ namespace Resume.Application.CQRS.Commands.Messages
     {
         private readonly IMessageRepository _repository;
         private readonly IUnitOfWork _uow;
+        private readonly ICacheService _cacheService;
 
-        public DeleteMessageCommandHandler(IMessageRepository repository, IUnitOfWork uow)
+        public DeleteMessageCommandHandler(IMessageRepository repository, IUnitOfWork uow,ICacheService cacheService)
         {
             _repository = repository;
             _uow = uow;
+            _cacheService = cacheService;
         }
         public async Task<bool> Handle(DeleteMessageCommand request, CancellationToken cancellationToken)
         {
@@ -27,6 +30,10 @@ namespace Resume.Application.CQRS.Commands.Messages
             if (message == null) return false;
             _repository.Delete(message);
             await _uow.SaveChangesAsync(cancellationToken);
+
+            await _cacheService.RemoveAsync($"message:{request.Id}:entity");
+            await _cacheService.RemoveAsync("messages:index:all");
+
             return true;
         }
     }

@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using MediatR;
 using Resume.Application.Convertors;
+using Resume.Application.Redis.Caching.Interfaces;
 using Resume.Domain.Entity.Reservation;
 using Resume.Domain.Repository;
 using Resume.Domain.UnitOfWorks.Interface;
@@ -18,15 +19,19 @@ namespace Resume.Application.CQRS.Commands.Reservations
         private readonly IReservationRepository _reservationRepository;
         private readonly IMapper _mapper;
         private readonly IUnitOfWork _uow;
+        private readonly ICacheService _cacheService;
 
-        public CreateOrEditReservationDateCommandHandler(IReservationRepository reservationRepository, IMapper mapper, IUnitOfWork uow)
+        public CreateOrEditReservationDateCommandHandler(IReservationRepository reservationRepository,
+            IMapper mapper, IUnitOfWork uow,ICacheService cacheService)
         {
             _reservationRepository = reservationRepository;
             _mapper = mapper;
             _uow = uow;
+            _cacheService = cacheService;
         }
 
-        public async Task<bool> Handle(CreateOrEditReservationDateCommand request, CancellationToken cancellationToken)
+        public async Task<bool> Handle
+            (CreateOrEditReservationDateCommand request, CancellationToken cancellationToken)
         {
             if (request.ReservationVm.Id == 0)
             {
@@ -34,6 +39,9 @@ namespace Resume.Application.CQRS.Commands.Reservations
                 newEntity.Date = request.ReservationVm.ReservationDate.ToMiladiDateTime();
                 await _reservationRepository.AddAsync(newEntity, cancellationToken);
                 await _uow.SaveChangesAsync(cancellationToken);
+
+                await _cacheService.RemoveAsync("reservations:index:all");
+
                 return true;
             }
 
@@ -45,6 +53,10 @@ namespace Resume.Application.CQRS.Commands.Reservations
             _reservationRepository.Update(currentEntity);
 
             await _uow.SaveChangesAsync(cancellationToken);
+
+            await _cacheService.RemoveAsync($"reservation:{request.ReservationVm.Id}:entity");
+            await _cacheService.RemoveAsync("reservations:index:all");
+
             return true;
         }
     }
